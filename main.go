@@ -6,10 +6,14 @@ import (
 	"log"
 	"net/http"
 	"strings"
+
+	"github.com/go-playground/validator/v10"
 )
 
+var validate *validator.Validate
+
 type HelloRequest struct {
-	Name string `json:"name"`
+	Name string `json:"name" validate:"required,min=1,max=100"`
 }
 
 type HelloResponse struct {
@@ -20,12 +24,33 @@ type ErrorResponse struct {
 	Error string `json:"error"`
 }
 
-func validateHelloRequest(req *HelloRequest) error {
-	if strings.TrimSpace(req.Name) == "" {
-		return fmt.Errorf("name is required and cannot be empty")
+// Helper function to send JSON responses
+func sendJSON(w http.ResponseWriter, status int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(data)
+}
+
+// Helper function to send error responses
+func sendError(w http.ResponseWriter, status int, message string) {
+	sendJSON(w, status, ErrorResponse{Error: message})
+}
+
+// Helper function to decode and validate JSON request
+func decodeAndValidate(r *http.Request, v interface{}) error {
+	if err := json.NewDecoder(r.Body).Decode(v); err != nil {
+		return fmt.Errorf("invalid JSON")
 	}
-	if len(req.Name) > 100 {
-		return fmt.Errorf("name must be 100 characters or less")
+	if err := validate.Struct(v); err != nil {
+		validationErrors := err.(validator.ValidationErrors)
+		firstError := validationErrors[0]
+		errorMsg := fmt.Sprintf("Field '%s' failed validation '%s'", 
+			firstError.Field(), 
+			firstError.Tag())
+		if firstError.Param() != "" {
+			errorMsg += fmt.Sprintf(" (expected: %s)", firstError.Param())
+		}
+		return fmt.Errorf("%s", errorMsg)
 	}
 	return nil
 }
@@ -34,36 +59,27 @@ func getHelloWorld(w http.ResponseWriter, r *http.Request) {
 	response := HelloResponse{
 		Message: "Hello, World!",
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	sendJSON(w, http.StatusOK, response)
 }
 
 func postHelloWorld(w http.ResponseWriter, r *http.Request) {
 	var req HelloRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ErrorResponse{Error: "Invalid JSON"})
+	if err := decodeAndValidate(r, &req); err != nil {
+		sendError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	defer r.Body.Close()
 
-	// Validate the request
-	if err := validateHelloRequest(&req); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ErrorResponse{Error: err.Error()})
-		return
-	}
-
 	response := HelloResponse{
 		Message: fmt.Sprintf("Hello, %s!", strings.TrimSpace(req.Name)),
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	sendJSON(w, http.StatusOK, response)
 }
 
 func main() {
+	// Initialize validator
+	validate = validator.New()
+
 	http.HandleFunc("GET /hello_world", getHelloWorld)
 	http.HandleFunc("POST /hello_world", postHelloWorld)
 
