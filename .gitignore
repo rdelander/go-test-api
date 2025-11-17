@@ -30,3 +30,5 @@ api-server
 
 # macOS
 .DS_Store
+
+tmp
