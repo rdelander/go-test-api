@@ -19,6 +19,8 @@ go.work
 
 # Build output
 api-server
+main
+go-test-api
 *.bin
 
 # IDE specific files

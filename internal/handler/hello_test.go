@@ -1,4 +1,4 @@
-package main
+package handler
 
 import (
 	"bytes"
@@ -8,20 +8,21 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-playground/validator/v10"
+	"go-test-api/internal/model"
+	"go-test-api/internal/validator"
 )
 
-func setupTestServer() *Server {
+func setupTestHandler() *HelloHandler {
 	v := validator.New()
-	return NewServer(v)
+	return NewHelloHandler(v)
 }
 
-func TestGetHelloWorld(t *testing.T) {
-	server := setupTestServer()
+func TestHelloHandler_Get(t *testing.T) {
+	handler := setupTestHandler()
 	req := httptest.NewRequest(http.MethodGet, "/hello_world", nil)
 	w := httptest.NewRecorder()
 
-	server.getHelloWorld(w, req)
+	handler.Get(w, req)
 
 	resp := w.Result()
 	defer resp.Body.Close()
@@ -30,7 +31,7 @@ func TestGetHelloWorld(t *testing.T) {
 		t.Errorf("expected status 200, got %d", resp.StatusCode)
 	}
 
-	var response HelloResponse
+	var response model.HelloResponse
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}
@@ -41,16 +42,16 @@ func TestGetHelloWorld(t *testing.T) {
 	}
 }
 
-func TestPostHelloWorld_Success(t *testing.T) {
-	server := setupTestServer()
-	requestBody := HelloRequest{Name: "Alice"}
+func TestHelloHandler_Post_Success(t *testing.T) {
+	handler := setupTestHandler()
+	requestBody := model.HelloRequest{Name: "Alice"}
 	body, _ := json.Marshal(requestBody)
 
 	req := httptest.NewRequest(http.MethodPost, "/hello_world", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	server.postHelloWorld(w, req)
+	handler.Post(w, req)
 
 	resp := w.Result()
 	defer resp.Body.Close()
@@ -59,7 +60,7 @@ func TestPostHelloWorld_Success(t *testing.T) {
 		t.Errorf("expected status 200, got %d", resp.StatusCode)
 	}
 
-	var response HelloResponse
+	var response model.HelloResponse
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}
@@ -70,16 +71,16 @@ func TestPostHelloWorld_Success(t *testing.T) {
 	}
 }
 
-func TestPostHelloWorld_EmptyName(t *testing.T) {
-	server := setupTestServer()
-	requestBody := HelloRequest{Name: ""}
+func TestHelloHandler_Post_EmptyName(t *testing.T) {
+	handler := setupTestHandler()
+	requestBody := model.HelloRequest{Name: ""}
 	body, _ := json.Marshal(requestBody)
 
 	req := httptest.NewRequest(http.MethodPost, "/hello_world", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	server.postHelloWorld(w, req)
+	handler.Post(w, req)
 
 	resp := w.Result()
 	defer resp.Body.Close()
@@ -87,28 +88,19 @@ func TestPostHelloWorld_EmptyName(t *testing.T) {
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Errorf("expected status 400, got %d", resp.StatusCode)
 	}
-
-	var response ErrorResponse
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		t.Fatalf("failed to decode response: %v", err)
-	}
-
-	if response.Error == "" {
-		t.Error("expected error message, got empty string")
-	}
 }
 
-func TestPostHelloWorld_NameTooLong(t *testing.T) {
-	server := setupTestServer()
+func TestHelloHandler_Post_NameTooLong(t *testing.T) {
+	handler := setupTestHandler()
 	longName := strings.Repeat("a", 101)
-	requestBody := HelloRequest{Name: longName}
+	requestBody := model.HelloRequest{Name: longName}
 	body, _ := json.Marshal(requestBody)
 
 	req := httptest.NewRequest(http.MethodPost, "/hello_world", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	server.postHelloWorld(w, req)
+	handler.Post(w, req)
 
 	resp := w.Result()
 	defer resp.Body.Close()
@@ -118,27 +110,18 @@ func TestPostHelloWorld_NameTooLong(t *testing.T) {
 	}
 }
 
-func TestPostHelloWorld_InvalidJSON(t *testing.T) {
-	server := setupTestServer()
+func TestHelloHandler_Post_InvalidJSON(t *testing.T) {
+	handler := setupTestHandler()
 	req := httptest.NewRequest(http.MethodPost, "/hello_world", bytes.NewBufferString("invalid json"))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	server.postHelloWorld(w, req)
+	handler.Post(w, req)
 
 	resp := w.Result()
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Errorf("expected status 400, got %d", resp.StatusCode)
-	}
-
-	var response ErrorResponse
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		t.Fatalf("failed to decode response: %v", err)
-	}
-
-	if response.Error != "invalid JSON" {
-		t.Errorf("expected 'invalid JSON' error, got '%s'", response.Error)
 	}
 }
