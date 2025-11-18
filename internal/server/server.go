@@ -1,40 +1,61 @@
 package server
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
 
+	"go-test-api/internal/database"
 	"go-test-api/internal/handler"
+	"go-test-api/internal/repository"
 	"go-test-api/internal/validator"
 )
 
 // Server represents the HTTP server with all dependencies
 type Server struct {
 	port         string
+	db           *sql.DB
 	helloHandler *handler.HelloHandler
 	userHandler  *handler.UserHandler
 }
 
 // Config holds server configuration
 type Config struct {
-	Port string
+	Port     string
+	Database database.Config
 }
 
 // New creates a new Server instance with all dependencies injected
-func New(cfg Config) *Server {
+func New(cfg Config) (*Server, error) {
+	// Initialize database connection
+	db, err := database.New(cfg.Database)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
+	}
+
 	// Initialize dependencies
 	v := validator.New()
+	userRepo := repository.NewUserRepository(db)
 
 	// Initialize handlers
 	helloHandler := handler.NewHelloHandler(v)
-	userHandler := handler.NewUserHandler(v)
+	userHandler := handler.NewUserHandler(v, userRepo)
 
 	return &Server{
 		port:         cfg.Port,
+		db:           db,
 		helloHandler: helloHandler,
 		userHandler:  userHandler,
+	}, nil
+}
+
+// Close closes the database connection
+func (s *Server) Close() error {
+	if s.db != nil {
+		return s.db.Close()
 	}
+	return nil
 }
 
 // setupRoutes registers all HTTP routes
@@ -44,6 +65,7 @@ func (s *Server) setupRoutes() {
 	http.HandleFunc("POST /hello_world", s.helloHandler.Post)
 
 	// User endpoints
+	http.HandleFunc("GET /users", s.userHandler.List)
 	http.HandleFunc("POST /users", s.userHandler.Create)
 }
 
@@ -60,6 +82,7 @@ func (s *Server) start() error {
 
 // Run starts the server and handles any errors
 func (s *Server) Run() {
+	defer s.Close()
 	if err := s.start(); err != nil {
 		log.Fatal(err)
 	}

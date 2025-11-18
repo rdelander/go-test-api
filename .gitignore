@@ -33,4 +33,13 @@ go-test-api
 # macOS
 .DS_Store
 
+# Air
 tmp
+
+# Environment variables
+.env
+.env.local
+
+# Database
+*.db
+*.sqlite

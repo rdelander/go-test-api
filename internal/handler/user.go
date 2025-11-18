@@ -2,10 +2,10 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"go-test-api/internal/model"
+	"go-test-api/internal/repository"
 	"go-test-api/internal/validator"
 	"go-test-api/pkg/response"
 )
@@ -13,12 +13,14 @@ import (
 // UserHandler handles user-related requests
 type UserHandler struct {
 	validator *validator.Validator
+	repo      *repository.UserRepository
 }
 
 // NewUserHandler creates a new UserHandler
-func NewUserHandler(v *validator.Validator) *UserHandler {
+func NewUserHandler(v *validator.Validator, repo *repository.UserRepository) *UserHandler {
 	return &UserHandler{
 		validator: v,
+		repo:      repo,
 	}
 }
 
@@ -39,15 +41,24 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Save to database (for now, just mock it)
-	// In a real app, you'd inject a database/repository here
-	userID := "usr_" + fmt.Sprintf("%d", len(req.Name)) // Mock ID generation
+	// Create user in database
+	user, err := h.repo.Create(r.Context(), &req)
+	if err != nil {
+		response.Error(w, http.StatusInternalServerError, "failed to create user")
+		return
+	}
 
 	// Build response
-	resp := model.UserResponse{
-		ID:    userID,
-		Name:  req.Name,
-		Email: req.Email,
+	response.JSON(w, http.StatusCreated, user)
+}
+
+// List handles GET /users
+func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
+	users, err := h.repo.List(r.Context())
+	if err != nil {
+		response.Error(w, http.StatusInternalServerError, "failed to list users")
+		return
 	}
-	response.JSON(w, http.StatusCreated, resp)
+
+	response.JSON(w, http.StatusOK, users)
 }
