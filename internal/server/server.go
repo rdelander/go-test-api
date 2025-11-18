@@ -13,6 +13,7 @@ import (
 type Server struct {
 	port         string
 	helloHandler *handler.HelloHandler
+	userHandler  *handler.UserHandler
 }
 
 // Config holds server configuration
@@ -27,17 +28,23 @@ func New(cfg Config) *Server {
 
 	// Initialize handlers
 	helloHandler := handler.NewHelloHandler(v)
+	userHandler := handler.NewUserHandler(v)
 
 	return &Server{
 		port:         cfg.Port,
 		helloHandler: helloHandler,
+		userHandler:  userHandler,
 	}
 }
 
 // setupRoutes registers all HTTP routes
 func (s *Server) setupRoutes() {
+	// Hello endpoints
 	http.HandleFunc("GET /hello_world", s.helloHandler.Get)
 	http.HandleFunc("POST /hello_world", s.helloHandler.Post)
+
+	// User endpoints
+	http.HandleFunc("POST /users", s.userHandler.Create)
 }
 
 // start starts the HTTP server
