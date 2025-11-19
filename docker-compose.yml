@@ -18,21 +18,32 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - app-network
 
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: go-test-api-pgadmin
+  app:
+    build: .
+    container_name: go-test-api-app
     restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@example.com
-      PGADMIN_DEFAULT_PASSWORD: admin
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: gouser
+      DB_PASSWORD: gopassword
+      DB_NAME: gotestdb
+      DB_SSLMODE: disable
+      PORT: 8080
     ports:
-      - "5050:80"
+      - "8080:8080"
     depends_on:
-      - postgres
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
 
 volumes:
   postgres_data:
-  pgadmin_data:

@@ -2,22 +2,42 @@ package main
 
 import (
 	"log"
+	"os"
+	"strconv"
 
 	"go-test-api/internal/database"
 	"go-test-api/internal/server"
 )
 
+func getEnv(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
+
+func getEnvAsInt(key string, defaultValue int) int {
+	valueStr := getEnv(key, "")
+	if valueStr == "" {
+		return defaultValue
+	}
+	if intValue, err := strconv.Atoi(valueStr); err == nil {
+		return intValue
+	}
+	return defaultValue
+}
+
 func main() {
-	// Initialize server configuration
+	// Load configuration from environment variables with defaults
 	cfg := server.Config{
-		Port: "8080",
+		Port: getEnv("PORT", "8080"),
 		Database: database.Config{
-			Host:     "localhost",
-			Port:     5432,
-			User:     "gouser",
-			Password: "gopassword",
-			DBName:   "gotestdb",
-			SSLMode:  "disable",
+			Host:     getEnv("DB_HOST", "localhost"),
+			Port:     getEnvAsInt("DB_PORT", 5432),
+			User:     getEnv("DB_USER", "gouser"),
+			Password: getEnv("DB_PASSWORD", "gopassword"),
+			DBName:   getEnv("DB_NAME", "gotestdb"),
+			SSLMode:  getEnv("DB_SSLMODE", "disable"),
 		},
 	}
 
