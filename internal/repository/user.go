@@ -48,6 +48,36 @@ func (r *UserRepository) Create(ctx context.Context, req *model.CreateUserReques
 	return &user, nil
 }
 
+// Upsert creates a new user or updates existing user by email (idempotent operation)
+func (r *UserRepository) Upsert(ctx context.Context, req *model.CreateUserRequest) (*model.UserResponse, error) {
+	query := `
+		INSERT INTO users (name, email, created_at, updated_at)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (email) 
+		DO UPDATE SET 
+			name = EXCLUDED.name,
+			updated_at = EXCLUDED.updated_at
+		RETURNING id, name, email
+	`
+
+	var user model.UserResponse
+
+	err := r.db.QueryRowContext(
+		ctx,
+		query,
+		req.Name,
+		req.Email,
+		time.Now(),
+		time.Now(),
+	).Scan(&user.ID, &user.Name, &user.Email)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to upsert user: %w", err)
+	}
+
+	return &user, nil
+}
+
 // GetByID retrieves a user by ID
 func (r *UserRepository) GetByID(ctx context.Context, id string) (*model.UserResponse, error) {
 	query := `SELECT id, name, email FROM users WHERE id = $1`

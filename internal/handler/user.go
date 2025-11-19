@@ -25,7 +25,7 @@ func NewUserHandler(v *validator.Validator, repo *repository.UserRepository) *Us
 	}
 }
 
-// Create handles POST /users
+// Create handles POST /users (idempotent - creates or updates by email)
 func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req model.CreateUserRequest
 
@@ -42,22 +42,18 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create user in database
-	user, err := h.repo.Create(r.Context(), &req)
+	// Upsert user in database (idempotent operation)
+	user, err := h.repo.Upsert(r.Context(), &req)
 	if err != nil {
-		// Check for specific database errors
-		if err.Error() == "pq: duplicate key value violates unique constraint \"users_email_key\"" {
-			response.Error(w, http.StatusConflict, "email already exists")
-			return
-		}
 		// Log full error for debugging (in production, use proper logging)
-		// log.Printf("Failed to create user: %v", err)
+		// log.Printf("Failed to upsert user: %v", err)
 		response.Error(w, http.StatusInternalServerError, fmt.Sprintf("failed to create user: %v", err))
 		return
 	}
 
-	// Build response
-	response.JSON(w, http.StatusCreated, user)
+	// Build response - always return 200 OK for idempotent operations
+	// (could be 201 for new, 200 for updated, but consistent 200 is simpler)
+	response.JSON(w, http.StatusOK, user)
 }
 
 // List handles GET /users
