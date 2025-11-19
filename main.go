@@ -52,8 +52,8 @@ func (s *Server) decodeAndValidate(r *http.Request, v interface{}) error {
 	if err := s.validator.Struct(v); err != nil {
 		validationErrors := err.(validator.ValidationErrors)
 		firstError := validationErrors[0]
-		errorMsg := fmt.Sprintf("Field '%s' failed validation '%s'", 
-			firstError.Field(), 
+		errorMsg := fmt.Sprintf("Field '%s' failed validation '%s'",
+			firstError.Field(),
 			firstError.Tag())
 		if firstError.Param() != "" {
 			errorMsg += fmt.Sprintf(" (expected: %s)", firstError.Param())
@@ -88,7 +88,7 @@ func (s *Server) postHelloWorld(w http.ResponseWriter, r *http.Request) {
 func main() {
 	// Initialize dependencies
 	validator := validator.New()
-	
+
 	// Create server with dependencies
 	server := NewServer(validator)
 
