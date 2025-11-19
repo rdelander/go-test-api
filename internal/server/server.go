@@ -1,21 +1,24 @@
 package server
 
 import (
-	"database/sql"
+	"context"
 	"fmt"
 	"log"
 	"net/http"
 
 	"go-test-api/internal/database"
+	"go-test-api/internal/db"
 	"go-test-api/internal/handler"
 	"go-test-api/internal/repository"
 	"go-test-api/internal/validator"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // Server represents the HTTP server with all dependencies
 type Server struct {
 	port         string
-	db           *sql.DB
+	pool         *pgxpool.Pool
 	helloHandler *handler.HelloHandler
 	userHandler  *handler.UserHandler
 }
@@ -29,14 +32,16 @@ type Config struct {
 // New creates a new Server instance with all dependencies injected
 func New(cfg Config) (*Server, error) {
 	// Initialize database connection
-	db, err := database.New(cfg.Database)
+	ctx := context.Background()
+	pool, err := database.New(ctx, cfg.Database)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
 	// Initialize dependencies
 	v := validator.New()
-	userRepo := repository.NewUserRepository(db)
+	queries := db.New(pool)
+	userRepo := repository.NewUserRepository(queries)
 
 	// Initialize handlers
 	helloHandler := handler.NewHelloHandler(v)
@@ -44,7 +49,7 @@ func New(cfg Config) (*Server, error) {
 
 	return &Server{
 		port:         cfg.Port,
-		db:           db,
+		pool:         pool,
 		helloHandler: helloHandler,
 		userHandler:  userHandler,
 	}, nil
@@ -52,8 +57,8 @@ func New(cfg Config) (*Server, error) {
 
 // Close closes the database connection
 func (s *Server) Close() error {
-	if s.db != nil {
-		return s.db.Close()
+	if s.pool != nil {
+		s.pool.Close()
 	}
 	return nil
 }
