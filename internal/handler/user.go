@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"go-test-api/internal/model"
@@ -44,7 +45,14 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 	// Create user in database
 	user, err := h.repo.Create(r.Context(), &req)
 	if err != nil {
-		response.Error(w, http.StatusInternalServerError, "failed to create user")
+		// Check for specific database errors
+		if err.Error() == "pq: duplicate key value violates unique constraint \"users_email_key\"" {
+			response.Error(w, http.StatusConflict, "email already exists")
+			return
+		}
+		// Log full error for debugging (in production, use proper logging)
+		// log.Printf("Failed to create user: %v", err)
+		response.Error(w, http.StatusInternalServerError, fmt.Sprintf("failed to create user: %v", err))
 		return
 	}
 
