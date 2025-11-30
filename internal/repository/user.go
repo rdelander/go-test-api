@@ -13,9 +13,7 @@ import (
 
 // UserRepo defines the interface for user data access
 type UserRepo interface {
-	Create(ctx context.Context, req *model.CreateUserRequest) (*model.UserResponse, error)
 	Upsert(ctx context.Context, req *model.CreateUserRequest) (*model.UserResponse, error)
-	GetByID(ctx context.Context, id string) (*model.UserResponse, error)
 	List(ctx context.Context) ([]*model.UserResponse, error)
 }
 

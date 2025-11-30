@@ -1,3 +1,5 @@
+//go:build unit
+
 package handler
 
 import (
@@ -30,14 +32,6 @@ func (m *mockUserRepository) List(ctx context.Context) ([]*model.UserResponse, e
 	if m.listFunc != nil {
 		return m.listFunc(ctx)
 	}
-	return nil, errors.New("not implemented")
-}
-
-func (m *mockUserRepository) Create(ctx context.Context, req *model.CreateUserRequest) (*model.UserResponse, error) {
-	return nil, errors.New("not implemented")
-}
-
-func (m *mockUserRepository) GetByID(ctx context.Context, id string) (*model.UserResponse, error) {
 	return nil, errors.New("not implemented")
 }
 
