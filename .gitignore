@@ -25,7 +25,8 @@ go-test-api
 *.bin
 
 # IDE specific files
-.vscode/
+.vscode/*
+!.vscode/settings.json
 .idea/
 *.swp
 *.swo
