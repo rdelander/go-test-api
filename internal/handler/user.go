@@ -14,11 +14,11 @@ import (
 // UserHandler handles user-related requests
 type UserHandler struct {
 	validator *validator.Validator
-	repo      *repository.UserRepository
+	repo      repository.UserRepo
 }
 
 // NewUserHandler creates a new UserHandler
-func NewUserHandler(v *validator.Validator, repo *repository.UserRepository) *UserHandler {
+func NewUserHandler(v *validator.Validator, repo repository.UserRepo) *UserHandler {
 	return &UserHandler{
 		validator: v,
 		repo:      repo,
