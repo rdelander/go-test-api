@@ -109,7 +109,9 @@ func TestUserHandler_Create(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			// Setup
 			mockRepo := &mockUserRepository{
 				upsertFunc: tt.mockUpsert,
@@ -199,7 +201,9 @@ func TestUserHandler_List(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			// Setup
 			mockRepo := &mockUserRepository{
 				listFunc:        tt.mockList,

@@ -209,3 +209,63 @@ func TestUserHandler_List_Integration(t *testing.T) {
 		}
 	}
 }
+
+func TestUserHandler_ListByEmail_Integration(t *testing.T) {
+	// Setup
+	cleanupUsers(t)
+	repo := repository.NewUserRepository(testQueries)
+	handler := NewUserHandler(validator.New(), repo)
+
+	// Create some test users
+	users := []struct {
+		name  string
+		email string
+	}{
+		{"Alice", "alice@example.com"},
+		{"Bob", "bob@example.com"},
+		{"John", "john.doe@example.com"},
+		{"Johnny", "johnny@example.com"},
+	}
+
+	for _, u := range users {
+		body := fmt.Sprintf(`{"name":"%s","email":"%s"}`, u.name, u.email)
+		req := httptest.NewRequest(http.MethodPost, "/users", bytes.NewBufferString(body))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		handler.Create(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("failed to create user %s: status %d body=%s", u.email, w.Code, w.Body.String())
+		}
+	}
+
+	// Filter by 'john' should match john.doe and johnny
+	req := httptest.NewRequest(http.MethodGet, "/users?email=john", nil)
+	w := httptest.NewRecorder()
+
+	handler.List(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected status %d, got %d", http.StatusOK, w.Code)
+	}
+
+	var response []map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+
+	if len(response) != 2 {
+		t.Fatalf("Expected 2 users matching 'john', got %d", len(response))
+	}
+
+	// Collect emails returned
+	emails := map[string]bool{}
+	for _, u := range response {
+		if e, ok := u["email"].(string); ok {
+			emails[e] = true
+		}
+	}
+
+	if !emails["john.doe@example.com"] || !emails["johnny@example.com"] {
+		t.Fatalf("Filtered results missing expected emails: %v", emails)
+	}
+}
