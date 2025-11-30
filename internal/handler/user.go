@@ -56,9 +56,22 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, http.StatusOK, user)
 }
 
-// List handles GET /users
+// List handles GET /users with optional email filter
 func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
-	users, err := h.repo.List(r.Context())
+	// Check for email query parameter
+	email := r.URL.Query().Get("email")
+
+	var users []*model.UserResponse
+	var err error
+
+	if email != "" {
+		// Filter by email (repository will add wildcards)
+		users, err = h.repo.ListByEmail(r.Context(), email)
+	} else {
+		// List all users
+		users, err = h.repo.List(r.Context())
+	}
+
 	if err != nil {
 		response.Error(w, http.StatusInternalServerError, "failed to list users")
 		return

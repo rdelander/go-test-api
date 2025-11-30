@@ -15,6 +15,7 @@ import (
 type UserRepo interface {
 	Upsert(ctx context.Context, req *model.CreateUserRequest) (*model.UserResponse, error)
 	List(ctx context.Context) ([]*model.UserResponse, error)
+	ListByEmail(ctx context.Context, email string) ([]*model.UserResponse, error)
 }
 
 // UserRepository handles user data access
@@ -59,6 +60,28 @@ func (r *UserRepository) List(ctx context.Context) ([]*model.UserResponse, error
 	users, err := r.queries.ListUsers(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list users: %w", err)
+	}
+
+	result := make([]*model.UserResponse, len(users))
+	for i, user := range users {
+		result[i] = &model.UserResponse{
+			ID:    fmt.Sprintf("%d", user.ID),
+			Name:  user.Name,
+			Email: user.Email,
+		}
+	}
+
+	return result, nil
+}
+
+// ListByEmail retrieves users by email filter (supports LIKE pattern)
+func (r *UserRepository) ListByEmail(ctx context.Context, email string) ([]*model.UserResponse, error) {
+	// Support simple email filtering by adding SQL LIKE wildcards here.
+	// Handlers pass a plain email string; repository translates it to a pattern.
+	pattern := "%" + email + "%"
+	users, err := r.queries.ListUsersByEmail(ctx, pattern)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list users by email: %w", err)
 	}
 
 	result := make([]*model.UserResponse, len(users))

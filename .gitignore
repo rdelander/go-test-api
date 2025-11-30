@@ -23,6 +23,7 @@ api-server
 main
 go-test-api
 *.bin
+bin
 
 # IDE specific files
 .vscode/*

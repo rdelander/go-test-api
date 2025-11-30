@@ -16,9 +16,7 @@ test-integration: ## Run integration tests only
 	@echo "Running integration tests..."
 	@./scripts/test-integration.sh
 
-test-all: ## Run all tests (unit + integration)
-	@echo "Running all tests..."
-	@go test -v ./...
+test-all: test-unit test-integration ## Run all tests (unit + integration)
 
 test-coverage: ## Run unit tests with coverage report
 	@echo "Running tests with coverage..."

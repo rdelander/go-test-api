@@ -3,6 +3,12 @@ SELECT id, name, email, created_at, updated_at
 FROM users
 ORDER BY id;
 
+-- name: ListUsersByEmail :many
+SELECT id, name, email, created_at, updated_at 
+FROM users
+WHERE email LIKE $1
+ORDER BY id;
+
 -- name: UpsertUser :one
 INSERT INTO users (name, email, created_at, updated_at)
 VALUES ($1, $2, $3, $4)

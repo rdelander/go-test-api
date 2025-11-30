@@ -17,8 +17,9 @@ import (
 
 // mockUserRepository is a mock implementation of UserRepository for testing
 type mockUserRepository struct {
-	upsertFunc func(ctx context.Context, req *model.CreateUserRequest) (*model.UserResponse, error)
-	listFunc   func(ctx context.Context) ([]*model.UserResponse, error)
+	upsertFunc      func(ctx context.Context, req *model.CreateUserRequest) (*model.UserResponse, error)
+	listFunc        func(ctx context.Context) ([]*model.UserResponse, error)
+	listByEmailFunc func(ctx context.Context, email string) ([]*model.UserResponse, error)
 }
 
 func (m *mockUserRepository) Upsert(ctx context.Context, req *model.CreateUserRequest) (*model.UserResponse, error) {
@@ -31,6 +32,13 @@ func (m *mockUserRepository) Upsert(ctx context.Context, req *model.CreateUserRe
 func (m *mockUserRepository) List(ctx context.Context) ([]*model.UserResponse, error) {
 	if m.listFunc != nil {
 		return m.listFunc(ctx)
+	}
+	return nil, errors.New("not implemented")
+}
+
+func (m *mockUserRepository) ListByEmail(ctx context.Context, email string) ([]*model.UserResponse, error) {
+	if m.listByEmailFunc != nil {
+		return m.listByEmailFunc(ctx, email)
 	}
 	return nil, errors.New("not implemented")
 }
@@ -138,11 +146,13 @@ func TestUserHandler_Create(t *testing.T) {
 
 func TestUserHandler_List(t *testing.T) {
 	tests := []struct {
-		name           string
-		mockList       func(ctx context.Context) ([]*model.UserResponse, error)
-		expectedStatus int
-		expectedCount  int
-		expectError    bool
+		name            string
+		query           string
+		mockList        func(ctx context.Context) ([]*model.UserResponse, error)
+		mockListByEmail func(ctx context.Context, email string) ([]*model.UserResponse, error)
+		expectedStatus  int
+		expectedCount   int
+		expectError     bool
 	}{
 		{
 			name: "successful list with users",
@@ -173,18 +183,36 @@ func TestUserHandler_List(t *testing.T) {
 			expectedStatus: http.StatusInternalServerError,
 			expectError:    true,
 		},
+		{
+			name:  "filter by email",
+			query: "john",
+			mockListByEmail: func(ctx context.Context, email string) ([]*model.UserResponse, error) {
+				if email != "john" {
+					return nil, errors.New("unexpected email")
+				}
+				return []*model.UserResponse{{ID: "1", Name: "John Doe", Email: "john@example.com"}}, nil
+			},
+			expectedStatus: http.StatusOK,
+			expectedCount:  1,
+			expectError:    false,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup
 			mockRepo := &mockUserRepository{
-				listFunc: tt.mockList,
+				listFunc:        tt.mockList,
+				listByEmailFunc: tt.mockListByEmail,
 			}
 			handler := NewUserHandler(validator.New(), mockRepo)
 
-			// Create request
-			req := httptest.NewRequest(http.MethodGet, "/users", nil)
+			// Create request (include query if provided)
+			url := "/users"
+			if tt.query != "" {
+				url = url + "?email=" + tt.query
+			}
+			req := httptest.NewRequest(http.MethodGet, url, nil)
 			w := httptest.NewRecorder()
 
 			// Execute
