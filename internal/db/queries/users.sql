@@ -6,7 +6,7 @@ ORDER BY id;
 -- name: ListUsersByEmail :many
 SELECT id, name, email, created_at, updated_at 
 FROM users
-WHERE email LIKE $1
+WHERE email ILIKE $1
 ORDER BY id;
 
 -- name: UpsertUser :one

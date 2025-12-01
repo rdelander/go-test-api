@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"go-test-api/internal/database"
@@ -216,15 +217,15 @@ func TestUserHandler_ListByEmail_Integration(t *testing.T) {
 	repo := repository.NewUserRepository(testQueries)
 	handler := NewUserHandler(validator.New(), repo)
 
-	// Create some test users
+	// Create some test users (mixed-case emails to verify case-insensitivity)
 	users := []struct {
 		name  string
 		email string
 	}{
-		{"Alice", "alice@example.com"},
-		{"Bob", "bob@example.com"},
-		{"John", "john.doe@example.com"},
-		{"Johnny", "johnny@example.com"},
+		{"Alice", "Alice@Example.com"},
+		{"Bob", "BOB@example.COM"},
+		{"John", "John.Doe@Example.com"},
+		{"Johnny", "johnny@EXAMPLE.com"},
 	}
 
 	for _, u := range users {
@@ -238,8 +239,8 @@ func TestUserHandler_ListByEmail_Integration(t *testing.T) {
 		}
 	}
 
-	// Filter by 'john' should match john.doe and johnny
-	req := httptest.NewRequest(http.MethodGet, "/users?email=john", nil)
+	// Filter by 'JoHn' with mixed case should still match john.doe and johnny
+	req := httptest.NewRequest(http.MethodGet, "/users?email=JoHn", nil)
 	w := httptest.NewRecorder()
 
 	handler.List(w, req)
@@ -257,11 +258,11 @@ func TestUserHandler_ListByEmail_Integration(t *testing.T) {
 		t.Fatalf("Expected 2 users matching 'john', got %d", len(response))
 	}
 
-	// Collect emails returned
+	// Collect emails returned (normalize to lowercase for case-insensitive comparison)
 	emails := map[string]bool{}
 	for _, u := range response {
 		if e, ok := u["email"].(string); ok {
-			emails[e] = true
+			emails[strings.ToLower(e)] = true
 		}
 	}
 
