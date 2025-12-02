@@ -8,7 +8,6 @@ import (
 
 	"go-test-api/internal/database"
 	"go-test-api/internal/db"
-	"go-test-api/internal/handler"
 	"go-test-api/internal/user"
 	"go-test-api/internal/validator"
 
@@ -17,10 +16,9 @@ import (
 
 // Server represents the HTTP server with all dependencies
 type Server struct {
-	port         string
-	pool         *pgxpool.Pool
-	helloHandler *handler.HelloHandler
-	userHandler  *user.Handler
+	port        string
+	pool        *pgxpool.Pool
+	userHandler *user.Handler
 }
 
 // Config holds server configuration
@@ -44,14 +42,12 @@ func New(cfg Config) (*Server, error) {
 	userRepo := user.NewRepository(queries)
 
 	// Initialize handlers
-	helloHandler := handler.NewHelloHandler(v)
 	userHandler := user.NewHandler(v, userRepo)
 
 	return &Server{
-		port:         cfg.Port,
-		pool:         pool,
-		helloHandler: helloHandler,
-		userHandler:  userHandler,
+		port:        cfg.Port,
+		pool:        pool,
+		userHandler: userHandler,
 	}, nil
 }
 
@@ -65,10 +61,6 @@ func (s *Server) Close() error {
 
 // setupRoutes registers all HTTP routes
 func (s *Server) setupRoutes() {
-	// Hello endpoints
-	http.HandleFunc("GET /hello_world", s.helloHandler.Get)
-	http.HandleFunc("POST /hello_world", s.helloHandler.Post)
-
 	// User endpoints
 	http.HandleFunc("GET /users", s.userHandler.List)
 	http.HandleFunc("POST /users", s.userHandler.Create)
