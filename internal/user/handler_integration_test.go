@@ -1,7 +1,7 @@
 //go:build integration
 // +build integration
 
-package handler
+package user
 
 import (
 	"bytes"
@@ -16,7 +16,6 @@ import (
 
 	"go-test-api/internal/database"
 	"go-test-api/internal/db"
-	"go-test-api/internal/repository"
 	"go-test-api/internal/validator"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -88,8 +87,8 @@ func cleanupUsers(t *testing.T) {
 func TestUserHandler_Create_Integration(t *testing.T) {
 	// Setup
 	cleanupUsers(t)
-	repo := repository.NewUserRepository(testQueries)
-	handler := NewUserHandler(validator.New(), repo)
+	repo := NewRepository(testQueries)
+	handler := NewHandler(validator.New(), repo)
 
 	tests := []struct {
 		name           string
@@ -162,8 +161,8 @@ func TestUserHandler_Create_Integration(t *testing.T) {
 func TestUserHandler_List_Integration(t *testing.T) {
 	// Setup
 	cleanupUsers(t)
-	repo := repository.NewUserRepository(testQueries)
-	handler := NewUserHandler(validator.New(), repo)
+	repo := NewRepository(testQueries)
+	handler := NewHandler(validator.New(), repo)
 
 	// Create some test users
 	users := []struct {
@@ -214,8 +213,8 @@ func TestUserHandler_List_Integration(t *testing.T) {
 func TestUserHandler_ListByEmail_Integration(t *testing.T) {
 	// Setup
 	cleanupUsers(t)
-	repo := repository.NewUserRepository(testQueries)
-	handler := NewUserHandler(validator.New(), repo)
+	repo := NewRepository(testQueries)
+	handler := NewHandler(validator.New(), repo)
 
 	// Create some test users (mixed-case emails to verify case-insensitivity)
 	users := []struct {

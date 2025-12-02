@@ -9,7 +9,7 @@ import (
 	"go-test-api/internal/database"
 	"go-test-api/internal/db"
 	"go-test-api/internal/handler"
-	"go-test-api/internal/repository"
+	"go-test-api/internal/user"
 	"go-test-api/internal/validator"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -20,7 +20,7 @@ type Server struct {
 	port         string
 	pool         *pgxpool.Pool
 	helloHandler *handler.HelloHandler
-	userHandler  *handler.UserHandler
+	userHandler  *user.Handler
 }
 
 // Config holds server configuration
@@ -41,11 +41,11 @@ func New(cfg Config) (*Server, error) {
 	// Initialize dependencies
 	v := validator.New()
 	queries := db.New(pool)
-	userRepo := repository.NewUserRepository(queries)
+	userRepo := user.NewRepository(queries)
 
 	// Initialize handlers
 	helloHandler := handler.NewHelloHandler(v)
-	userHandler := handler.NewUserHandler(v, userRepo)
+	userHandler := user.NewHandler(v, userRepo)
 
 	return &Server{
 		port:         cfg.Port,

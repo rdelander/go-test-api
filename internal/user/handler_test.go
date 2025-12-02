@@ -1,6 +1,6 @@
 //go:build unit
 
-package handler
+package user
 
 import (
 	"bytes"
@@ -11,32 +11,31 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"go-test-api/internal/model"
 	"go-test-api/internal/validator"
 )
 
 // mockUserRepository is a mock implementation of UserRepository for testing
 type mockUserRepository struct {
-	upsertFunc      func(ctx context.Context, req *model.CreateUserRequest) (*model.UserResponse, error)
-	listFunc        func(ctx context.Context) ([]*model.UserResponse, error)
-	listByEmailFunc func(ctx context.Context, email string) ([]*model.UserResponse, error)
+	upsertFunc      func(ctx context.Context, req *CreateUserRequest) (*UserResponse, error)
+	listFunc        func(ctx context.Context) ([]*UserResponse, error)
+	listByEmailFunc func(ctx context.Context, email string) ([]*UserResponse, error)
 }
 
-func (m *mockUserRepository) Upsert(ctx context.Context, req *model.CreateUserRequest) (*model.UserResponse, error) {
+func (m *mockUserRepository) Upsert(ctx context.Context, req *CreateUserRequest) (*UserResponse, error) {
 	if m.upsertFunc != nil {
 		return m.upsertFunc(ctx, req)
 	}
 	return nil, errors.New("not implemented")
 }
 
-func (m *mockUserRepository) List(ctx context.Context) ([]*model.UserResponse, error) {
+func (m *mockUserRepository) List(ctx context.Context) ([]*UserResponse, error) {
 	if m.listFunc != nil {
 		return m.listFunc(ctx)
 	}
 	return nil, errors.New("not implemented")
 }
 
-func (m *mockUserRepository) ListByEmail(ctx context.Context, email string) ([]*model.UserResponse, error) {
+func (m *mockUserRepository) ListByEmail(ctx context.Context, email string) ([]*UserResponse, error) {
 	if m.listByEmailFunc != nil {
 		return m.listByEmailFunc(ctx, email)
 	}
@@ -47,15 +46,15 @@ func TestUserHandler_Create(t *testing.T) {
 	tests := []struct {
 		name           string
 		body           string
-		mockUpsert     func(ctx context.Context, req *model.CreateUserRequest) (*model.UserResponse, error)
+		mockUpsert     func(ctx context.Context, req *CreateUserRequest) (*UserResponse, error)
 		expectedStatus int
 		expectedBody   map[string]interface{}
 	}{
 		{
 			name: "valid user creation",
 			body: `{"name":"John Doe","email":"john@example.com"}`,
-			mockUpsert: func(ctx context.Context, req *model.CreateUserRequest) (*model.UserResponse, error) {
-				return &model.UserResponse{
+			mockUpsert: func(ctx context.Context, req *CreateUserRequest) (*UserResponse, error) {
+				return &UserResponse{
 					ID:    "1",
 					Name:  req.Name,
 					Email: req.Email,
@@ -98,7 +97,7 @@ func TestUserHandler_Create(t *testing.T) {
 		{
 			name: "database error",
 			body: `{"name":"John Doe","email":"john@example.com"}`,
-			mockUpsert: func(ctx context.Context, req *model.CreateUserRequest) (*model.UserResponse, error) {
+			mockUpsert: func(ctx context.Context, req *CreateUserRequest) (*UserResponse, error) {
 				return nil, errors.New("database connection failed")
 			},
 			expectedStatus: http.StatusInternalServerError,
@@ -116,7 +115,7 @@ func TestUserHandler_Create(t *testing.T) {
 			mockRepo := &mockUserRepository{
 				upsertFunc: tt.mockUpsert,
 			}
-			handler := NewUserHandler(validator.New(), mockRepo)
+			handler := NewHandler(validator.New(), mockRepo)
 
 			// Create request
 			req := httptest.NewRequest(http.MethodPost, "/users", bytes.NewBufferString(tt.body))
@@ -150,16 +149,16 @@ func TestUserHandler_List(t *testing.T) {
 	tests := []struct {
 		name            string
 		query           string
-		mockList        func(ctx context.Context) ([]*model.UserResponse, error)
-		mockListByEmail func(ctx context.Context, email string) ([]*model.UserResponse, error)
+		mockList        func(ctx context.Context) ([]*UserResponse, error)
+		mockListByEmail func(ctx context.Context, email string) ([]*UserResponse, error)
 		expectedStatus  int
 		expectedCount   int
 		expectError     bool
 	}{
 		{
 			name: "successful list with users",
-			mockList: func(ctx context.Context) ([]*model.UserResponse, error) {
-				return []*model.UserResponse{
+			mockList: func(ctx context.Context) ([]*UserResponse, error) {
+				return []*UserResponse{
 					{ID: "1", Name: "John Doe", Email: "john@example.com"},
 					{ID: "2", Name: "Jane Smith", Email: "jane@example.com"},
 				}, nil
@@ -170,8 +169,8 @@ func TestUserHandler_List(t *testing.T) {
 		},
 		{
 			name: "successful list with no users",
-			mockList: func(ctx context.Context) ([]*model.UserResponse, error) {
-				return []*model.UserResponse{}, nil
+			mockList: func(ctx context.Context) ([]*UserResponse, error) {
+				return []*UserResponse{}, nil
 			},
 			expectedStatus: http.StatusOK,
 			expectedCount:  0,
@@ -179,7 +178,7 @@ func TestUserHandler_List(t *testing.T) {
 		},
 		{
 			name: "database error",
-			mockList: func(ctx context.Context) ([]*model.UserResponse, error) {
+			mockList: func(ctx context.Context) ([]*UserResponse, error) {
 				return nil, errors.New("database connection failed")
 			},
 			expectedStatus: http.StatusInternalServerError,
@@ -188,11 +187,11 @@ func TestUserHandler_List(t *testing.T) {
 		{
 			name:  "filter by email",
 			query: "john",
-			mockListByEmail: func(ctx context.Context, email string) ([]*model.UserResponse, error) {
+			mockListByEmail: func(ctx context.Context, email string) ([]*UserResponse, error) {
 				if email != "john" {
 					return nil, errors.New("unexpected email")
 				}
-				return []*model.UserResponse{{ID: "1", Name: "John Doe", Email: "john@example.com"}}, nil
+				return []*UserResponse{{ID: "1", Name: "John Doe", Email: "john@example.com"}}, nil
 			},
 			expectedStatus: http.StatusOK,
 			expectedCount:  1,
@@ -209,7 +208,7 @@ func TestUserHandler_List(t *testing.T) {
 				listFunc:        tt.mockList,
 				listByEmailFunc: tt.mockListByEmail,
 			}
-			handler := NewUserHandler(validator.New(), mockRepo)
+			handler := NewHandler(validator.New(), mockRepo)
 
 			// Create request (include query if provided)
 			url := "/users"
@@ -237,7 +236,7 @@ func TestUserHandler_List(t *testing.T) {
 					t.Error("expected error field in response")
 				}
 			} else {
-				var users []*model.UserResponse
+				var users []*UserResponse
 				if err := json.NewDecoder(w.Body).Decode(&users); err != nil {
 					t.Fatalf("failed to decode response: %v", err)
 				}

@@ -1,4 +1,4 @@
-package model
+package user
 
 // CreateUserRequest represents the request to create a user
 type CreateUserRequest struct {
