@@ -7,8 +7,8 @@ import (
 	"net/http"
 
 	"go-test-api/internal/database"
-	"go-test-api/internal/db"
 	"go-test-api/internal/user"
+	"go-test-api/internal/user/db"
 	"go-test-api/internal/validator"
 
 	"github.com/jackc/pgx/v5/pgxpool"

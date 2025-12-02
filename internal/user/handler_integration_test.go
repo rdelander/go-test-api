@@ -15,7 +15,7 @@ import (
 	"testing"
 
 	"go-test-api/internal/database"
-	"go-test-api/internal/db"
+	"go-test-api/internal/user/db"
 	"go-test-api/internal/validator"
 
 	"github.com/jackc/pgx/v5/pgxpool"

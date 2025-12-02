@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"go-test-api/internal/db"
+	"go-test-api/internal/user/db"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
