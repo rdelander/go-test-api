@@ -8,7 +8,7 @@ import (
 
 	"go-test-api/internal/database"
 	"go-test-api/internal/user"
-	"go-test-api/internal/user/db"
+	userdb "go-test-api/internal/user/db"
 	"go-test-api/internal/validator"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -36,18 +36,15 @@ func New(cfg Config) (*Server, error) {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	// Initialize dependencies
-	v := validator.New()
-	queries := db.New(pool)
-	userRepo := user.NewRepository(queries)
-
-	// Initialize handlers
-	userHandler := user.NewHandler(v, userRepo)
-
 	return &Server{
-		port:        cfg.Port,
-		pool:        pool,
-		userHandler: userHandler,
+		port: cfg.Port,
+		pool: pool,
+		userHandler: user.NewHandler(
+			validator.New(),
+			user.NewRepository(
+				userdb.New(pool),
+			),
+		),
 	}, nil
 }
 
@@ -61,16 +58,26 @@ func (s *Server) Close() error {
 
 // setupRoutes registers all HTTP routes
 func (s *Server) setupRoutes() {
-	// User endpoints
-	http.HandleFunc("GET /users", s.userHandler.List)
-	http.HandleFunc("POST /users", s.userHandler.Create)
+	routes := []struct {
+		method  string
+		path    string
+		handler http.HandlerFunc
+	}{
+		{"GET", "/users", s.userHandler.List},
+		{"POST", "/users", s.userHandler.Create},
+	}
+
+	for _, route := range routes {
+		http.HandleFunc(route.method+" "+route.path, route.handler)
+		log.Printf("Registered route: %s %s", route.method, route.path)
+	}
 }
 
 // start starts the HTTP server
 func (s *Server) start() error {
 	s.setupRoutes()
 
-	fmt.Printf("Server starting on port %s...\n", s.port)
+	log.Printf("Server starting on port %s...", s.port)
 	if err := http.ListenAndServe(":"+s.port, nil); err != nil {
 		return fmt.Errorf("server failed to start: %w", err)
 	}
