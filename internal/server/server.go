@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"go-test-api/internal/database"
+	"go-test-api/internal/middleware"
 	"go-test-api/internal/user"
 	userdb "go-test-api/internal/user/db"
 	"go-test-api/internal/validator"
@@ -77,8 +78,11 @@ func (s *Server) setupRoutes() {
 func (s *Server) start() error {
 	s.setupRoutes()
 
+	// Wrap default mux with logging middleware
+	handler := middleware.Logging(http.DefaultServeMux)
+
 	log.Printf("Server starting on port %s...", s.port)
-	if err := http.ListenAndServe(":"+s.port, nil); err != nil {
+	if err := http.ListenAndServe(":"+s.port, handler); err != nil {
 		return fmt.Errorf("server failed to start: %w", err)
 	}
 	return nil
