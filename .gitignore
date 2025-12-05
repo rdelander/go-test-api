@@ -12,6 +12,9 @@
 *.out
 coverage.html
 
+# Debug binaries
+__debug_bin*
+
 # Dependency directories
 vendor/
 
@@ -28,6 +31,7 @@ bin
 # IDE specific files
 .vscode/*
 !.vscode/settings.json
+!.vscode/launch.json
 .idea/
 *.swp
 *.swo
