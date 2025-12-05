@@ -6,6 +6,8 @@ import (
 	"log"
 	"net/http"
 
+	"go-test-api/internal/address"
+	addressdb "go-test-api/internal/address/db"
 	"go-test-api/internal/database"
 	"go-test-api/internal/middleware"
 	"go-test-api/internal/user"
@@ -17,9 +19,10 @@ import (
 
 // Server represents the HTTP server with all dependencies
 type Server struct {
-	port        string
-	pool        *pgxpool.Pool
-	userHandler *user.Handler
+	port           string
+	pool           *pgxpool.Pool
+	userHandler    *user.Handler
+	addressHandler *address.Handler
 }
 
 // Config holds server configuration
@@ -46,6 +49,13 @@ func New(cfg Config) (*Server, error) {
 				userdb.New(pool),
 			),
 		),
+		addressHandler: address.NewHandler(
+			validator.New(),
+			address.NewRepository(
+				addressdb.New(pool),
+				userdb.New(pool),
+			),
+		),
 	}, nil
 }
 
@@ -66,6 +76,11 @@ func (s *Server) setupRoutes() {
 	}{
 		{"GET", "/users", s.userHandler.List},
 		{"POST", "/users", s.userHandler.Create},
+		{"GET", "/addresses", s.addressHandler.List},
+		{"POST", "/addresses", s.addressHandler.Create},
+		{"GET", "/addresses/{id}", s.addressHandler.Get},
+		{"PUT", "/addresses/{id}", s.addressHandler.Update},
+		{"DELETE", "/addresses/{id}", s.addressHandler.Delete},
 	}
 
 	for _, route := range routes {
