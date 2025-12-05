@@ -36,6 +36,9 @@ func New(ctx context.Context, cfg Config) (*pgxpool.Pool, error) {
 	config.MaxConnLifetime = 5 * time.Minute
 	config.MaxConnIdleTime = 1 * time.Minute
 
+	// Add query tracer for logging
+	config.ConnConfig.Tracer = &QueryTracer{}
+
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create connection pool: %w", err)

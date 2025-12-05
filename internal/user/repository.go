@@ -17,21 +17,14 @@ type Repo interface {
 	ListByEmail(ctx context.Context, email string) ([]*UserResponse, error)
 }
 
-// queriesInterface defines methods needed from db.Queries (allows tracking wrapper)
-type queriesInterface interface {
-	UpsertUser(ctx context.Context, arg db.UpsertUserParams) (db.User, error)
-	ListUsers(ctx context.Context) ([]db.User, error)
-	ListUsersByEmail(ctx context.Context, email string) ([]db.User, error)
-}
-
 // Repository handles user data access
 type Repository struct {
-	queries queriesInterface
+	queries *db.Queries
 }
 
 // NewRepository creates a new Repository
 func NewRepository(queries *db.Queries) *Repository {
-	return &Repository{queries: NewTrackedQueries(queries)}
+	return &Repository{queries: queries}
 }
 
 // Upsert creates or updates a user by email
