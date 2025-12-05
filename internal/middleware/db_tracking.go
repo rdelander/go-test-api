@@ -44,7 +44,7 @@ func (s *DBStats) AddQuery(queryType, query string, rowCount int) {
 func (s *DBStats) Summary() (total, selects, inserts, updates, deletes int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	total = len(s.Queries)
 	for _, q := range s.Queries {
 		switch q.QueryType {

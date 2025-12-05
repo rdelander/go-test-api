@@ -2,11 +2,11 @@ package database
 
 import (
 	"context"
-	"strings"
 
 	"go-test-api/internal/middleware"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type tracerContextKey string
@@ -24,22 +24,23 @@ func (t *QueryTracer) TraceQueryStart(ctx context.Context, conn *pgx.Conn, data 
 func (t *QueryTracer) TraceQueryEnd(ctx context.Context, conn *pgx.Conn, data pgx.TraceQueryEndData) {
 	if stats := middleware.GetDBStats(ctx); stats != nil {
 		sql, _ := ctx.Value(sqlKey).(string)
-		queryType := inferQueryType(sql)
+		queryType := inferQueryType(data.CommandTag)
 		rowCount := int(data.CommandTag.RowsAffected())
 		stats.AddQuery(queryType, sql, rowCount)
 	}
 }
 
-func inferQueryType(sql string) string {
-	sql = strings.TrimSpace(strings.ToUpper(sql))
-	if strings.HasPrefix(sql, "SELECT") {
+func inferQueryType(tag pgconn.CommandTag) string {
+	switch {
+	case tag.Select():
 		return "SELECT"
-	} else if strings.HasPrefix(sql, "INSERT") {
+	case tag.Insert():
 		return "INSERT"
-	} else if strings.HasPrefix(sql, "UPDATE") {
+	case tag.Update():
 		return "UPDATE"
-	} else if strings.HasPrefix(sql, "DELETE") {
+	case tag.Delete():
 		return "DELETE"
+	default:
+		return "OTHER"
 	}
-	return "OTHER"
 }
