@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
 	"time"
 )
@@ -50,20 +50,21 @@ func Logging(next http.Handler) http.Handler {
 
 		// Log canonical line
 		duration := time.Since(start)
-		log.Printf(
-			"method=%s path=%s status=%d duration_ms=%d ip=%s user_agent=%q bytes=%d db_queries=%d db_selects=%d db_inserts=%d db_updates=%d db_deletes=%d",
-			r.Method,
-			r.URL.Path,
-			wrapped.statusCode,
-			duration.Milliseconds(),
-			r.RemoteAddr,
-			r.UserAgent(),
-			wrapped.written,
-			total,
-			selects,
-			inserts,
-			updates,
-			deletes,
+		slog.Info("http_request",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"status", wrapped.statusCode,
+			"duration_ms", duration.Milliseconds(),
+			"ip", r.RemoteAddr,
+			"user_agent", r.UserAgent(),
+			"bytes", wrapped.written,
+			"db", slog.GroupValue(
+				slog.Int("queries", total),
+				slog.Int("selects", selects),
+				slog.Int("inserts", inserts),
+				slog.Int("updates", updates),
+				slog.Int("deletes", deletes),
+			),
 		)
 	})
 }

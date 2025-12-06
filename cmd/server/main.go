@@ -1,11 +1,12 @@
 package main
 
 import (
-	"log"
+	"log/slog"
 	"os"
 	"strconv"
 
 	"go-test-api/internal/database"
+	"go-test-api/internal/logging"
 	"go-test-api/internal/server"
 )
 
@@ -27,7 +28,29 @@ func getEnvAsInt(key string, defaultValue int) int {
 	return defaultValue
 }
 
+func setupLogger() {
+	var handler slog.Handler
+	env := getEnv("ENV", "development")
+
+	if env == "production" {
+		// Compact JSON logging for production
+		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+			Level: slog.LevelInfo,
+		})
+	} else {
+		// Pretty-printed JSON for development
+		handler = logging.NewPrettyJSONHandler(os.Stdout, &slog.HandlerOptions{
+			Level: slog.LevelInfo,
+		})
+	}
+
+	logger := slog.New(handler)
+	slog.SetDefault(logger)
+}
+
 func main() {
+	setupLogger()
+
 	// Load configuration from environment variables with defaults
 	cfg := server.Config{
 		Port: getEnv("PORT", "8080"),
@@ -44,7 +67,8 @@ func main() {
 	// Create server
 	srv, err := server.New(cfg)
 	if err != nil {
-		log.Fatalf("Failed to create server: %v", err)
+		slog.Error("Failed to create server", "error", err)
+		os.Exit(1)
 	}
 
 	// Run server
