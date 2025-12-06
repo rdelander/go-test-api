@@ -73,7 +73,6 @@ func (s *Server) Close() error {
 func (s *Server) setupRoutes() {
 	// Swagger UI
 	http.HandleFunc("GET /swagger/", httpSwagger.WrapHandler)
-	log.Printf("Registered route: GET /swagger/")
 
 	routes := []struct {
 		method  string
@@ -89,10 +88,13 @@ func (s *Server) setupRoutes() {
 		{"DELETE", "/addresses/{id}", s.addressHandler.Delete},
 	}
 
+	routeList := []string{"GET /swagger/"}
 	for _, route := range routes {
 		http.HandleFunc(route.method+" "+route.path, route.handler)
-		log.Printf("Registered route: %s %s", route.method, route.path)
+		routeList = append(routeList, route.method+" "+route.path)
 	}
+
+	log.Printf("Registered routes: %v", routeList)
 }
 
 // start starts the HTTP server
