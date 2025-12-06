@@ -21,6 +21,16 @@ func NewHandler(v *validator.Validator, repo Repo) *Handler {
 }
 
 // Create handles POST /users
+// @Summary Create a new user
+// @Description Create a new user or update existing user by email
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param user body CreateUserRequest true "User to create"
+// @Success 200 {object} UserResponse
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /users [post]
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var req CreateUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -41,6 +51,14 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 // List handles GET /users with optional email filter
+// @Summary List all users
+// @Description Get list of all users, optionally filtered by email
+// @Tags users
+// @Produce json
+// @Param email query string false "Filter by email"
+// @Success 200 {array} UserResponse
+// @Failure 500 {object} map[string]string
+// @Router /users [get]
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	email := r.URL.Query().Get("email")
 	var users []*UserResponse

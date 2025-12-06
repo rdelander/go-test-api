@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 
+	_ "go-test-api/docs"
 	"go-test-api/internal/address"
 	addressdb "go-test-api/internal/address/db"
 	"go-test-api/internal/database"
@@ -15,6 +16,7 @@ import (
 	"go-test-api/internal/validator"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 // Server represents the HTTP server with all dependencies
@@ -69,6 +71,10 @@ func (s *Server) Close() error {
 
 // setupRoutes registers all HTTP routes
 func (s *Server) setupRoutes() {
+	// Swagger UI
+	http.HandleFunc("GET /swagger/", httpSwagger.WrapHandler)
+	log.Printf("Registered route: GET /swagger/")
+
 	routes := []struct {
 		method  string
 		path    string

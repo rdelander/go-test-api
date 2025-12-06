@@ -50,3 +50,6 @@ tmp
 # Database
 *.db
 *.sqlite
+
+# Swagger docs (regenerate with swag init)
+docs/

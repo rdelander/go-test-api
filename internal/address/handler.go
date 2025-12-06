@@ -22,6 +22,16 @@ func NewHandler(v *validator.Validator, repo Repo) *Handler {
 }
 
 // Create handles POST /addresses
+// @Summary Create a new address
+// @Description Create a new address for an entity (user, etc.)
+// @Tags addresses
+// @Accept json
+// @Produce json
+// @Param address body CreateAddressRequest true "Address to create"
+// @Success 201 {object} AddressResponse
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /addresses [post]
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var req CreateAddressRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -44,6 +54,15 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 // Get handles GET /addresses/{id}
+// @Summary Get an address by ID
+// @Description Retrieve a specific address by its ID
+// @Tags addresses
+// @Produce json
+// @Param id path int true "Address ID"
+// @Success 200 {object} AddressResponse
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Router /addresses/{id} [get]
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 32)
@@ -62,6 +81,17 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 // List handles GET /addresses?entity_type=user&entity_id=1&address_type=shipping
+// @Summary List addresses for an entity
+// @Description Get all addresses for a specific entity, optionally filtered by address type
+// @Tags addresses
+// @Produce json
+// @Param entity_type query string true "Entity type (e.g., user)"
+// @Param entity_id query string true "Entity ID"
+// @Param address_type query string false "Address type (shipping, billing)"
+// @Success 200 {array} AddressResponse
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /addresses [get]
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	entityType := r.URL.Query().Get("entity_type")
 	entityID := r.URL.Query().Get("entity_id")
@@ -90,6 +120,17 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 // Update handles PUT /addresses/{id}
+// @Summary Update an address
+// @Description Update an existing address by ID
+// @Tags addresses
+// @Accept json
+// @Produce json
+// @Param id path int true "Address ID"
+// @Param address body UpdateAddressRequest true "Updated address data"
+// @Success 200 {object} AddressResponse
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /addresses/{id} [put]
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 32)
@@ -119,6 +160,14 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 // Delete handles DELETE /addresses/{id}
+// @Summary Delete an address
+// @Description Delete an existing address by ID
+// @Tags addresses
+// @Param id path int true "Address ID"
+// @Success 204 "No Content"
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /addresses/{id} [delete]
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 32)
