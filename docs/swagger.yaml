@@ -1,0 +1,487 @@
+basePath: /
+definitions:
+  address.AddressResponse:
+    properties:
+      address_type:
+        type: string
+      city:
+        type: string
+      country:
+        type: string
+      entity_id:
+        type: string
+      entity_type:
+        type: string
+      id:
+        type: string
+      postal_code:
+        type: string
+      state:
+        type: string
+      street_line1:
+        type: string
+      street_line2:
+        type: string
+    type: object
+  address.CreateAddressRequest:
+    properties:
+      address_type:
+        enum:
+        - shipping
+        - billing
+        type: string
+      city:
+        maxLength: 100
+        type: string
+      country:
+        maxLength: 100
+        type: string
+      entity_id:
+        minimum: 1
+        type: integer
+      entity_type:
+        enum:
+        - user
+        type: string
+      postal_code:
+        maxLength: 20
+        type: string
+      state:
+        maxLength: 100
+        type: string
+      street_line1:
+        maxLength: 255
+        type: string
+      street_line2:
+        maxLength: 255
+        type: string
+    required:
+    - address_type
+    - city
+    - country
+    - entity_id
+    - entity_type
+    - postal_code
+    - state
+    - street_line1
+    type: object
+  address.UpdateAddressRequest:
+    properties:
+      city:
+        maxLength: 100
+        type: string
+      country:
+        maxLength: 100
+        type: string
+      postal_code:
+        maxLength: 20
+        type: string
+      state:
+        maxLength: 100
+        type: string
+      street_line1:
+        maxLength: 255
+        type: string
+      street_line2:
+        maxLength: 255
+        type: string
+    required:
+    - city
+    - country
+    - postal_code
+    - state
+    - street_line1
+    type: object
+  auth.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  auth.RegisterRequest:
+    properties:
+      email:
+        type: string
+      name:
+        maxLength: 100
+        minLength: 1
+        type: string
+      password:
+        maxLength: 72
+        minLength: 8
+        type: string
+    required:
+    - email
+    - name
+    - password
+    type: object
+  auth.TokenResponse:
+    properties:
+      expires_at:
+        type: integer
+      token:
+        type: string
+      user:
+        $ref: '#/definitions/auth.User'
+    type: object
+  auth.User:
+    properties:
+      email:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  user.UserResponse:
+    properties:
+      email:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@example.com
+    name: API Support
+  description: A RESTful API for managing users and addresses
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: Go Test API
+  version: "1.0"
+paths:
+  /addresses:
+    get:
+      description: Get all addresses for a specific entity, optionally filtered by
+        address type
+      parameters:
+      - description: Entity type (e.g., user)
+        in: query
+        name: entity_type
+        required: true
+        type: string
+      - description: Entity ID
+        in: query
+        name: entity_id
+        required: true
+        type: string
+      - description: Address type (shipping, billing)
+        in: query
+        name: address_type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/address.AddressResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List addresses for an entity
+      tags:
+      - addresses
+    post:
+      consumes:
+      - application/json
+      description: Create a new address for an entity (user, etc.)
+      parameters:
+      - description: Address to create
+        in: body
+        name: address
+        required: true
+        schema:
+          $ref: '#/definitions/address.CreateAddressRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/address.AddressResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new address
+      tags:
+      - addresses
+  /addresses/{id}:
+    delete:
+      description: Delete an existing address by ID
+      parameters:
+      - description: Address ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete an address
+      tags:
+      - addresses
+    get:
+      description: Retrieve a specific address by its ID
+      parameters:
+      - description: Address ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/address.AddressResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get an address by ID
+      tags:
+      - addresses
+    put:
+      consumes:
+      - application/json
+      description: Update an existing address by ID
+      parameters:
+      - description: Address ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated address data
+        in: body
+        name: address
+        required: true
+        schema:
+          $ref: '#/definitions/address.UpdateAddressRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/address.AddressResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update an address
+      tags:
+      - addresses
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user with email and password, returns JWT token
+      parameters:
+      - description: Login credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/auth.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Login user
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Create a new user account with email and password
+      parameters:
+      - description: Registration details
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/auth.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/auth.TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Register a new user
+      tags:
+      - auth
+  /users:
+    get:
+      description: Get list of all users, optionally filtered by email
+      parameters:
+      - description: Filter by email
+        in: query
+        name: email
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/user.UserResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all users
+      tags:
+      - users
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
