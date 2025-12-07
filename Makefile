@@ -12,9 +12,17 @@ test-unit: ## Run unit tests only
 	@echo "Running unit tests..."
 	@go test -tags=unit -v ./...
 
+test-unit-ci: ## Run unit tests with race detection and coverage for CI
+	@echo "Running unit tests with race detection and coverage..."
+	@go test -tags=unit -v -race -coverprofile=coverage.out ./...
+
 test-integration: ## Run integration tests only
 	@echo "Running integration tests..."
 	@./scripts/test-integration.sh
+
+test-integration-ci: ## Run integration tests for CI (no docker setup)
+	@echo "Running integration tests..."
+	@go test -tags=integration -v ./...
 
 test-all: test-unit test-integration ## Run all tests (unit + integration)
 
@@ -63,8 +71,20 @@ sqlc-generate: ## Generate sqlc code from SQL queries
 fmt: ## Format Go code
 	@go fmt ./...
 
+fmt-check: ## Check if code is formatted
+	@if [ "$$(gofmt -s -l . | wc -l)" -gt 0 ]; then \
+		echo "The following files need formatting:"; \
+		gofmt -s -l .; \
+		exit 1; \
+	fi
+
+vet: ## Run go vet
+	@go vet ./...
+
 lint: ## Run linter (requires golangci-lint)
 	@golangci-lint run
+
+lint-ci: fmt-check vet lint ## Run all linting checks for CI
 
 dev: docker-up-db migrate-up ## Start development environment (DB + migrations)
 	@echo "Development environment ready!"
