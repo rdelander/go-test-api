@@ -78,11 +78,10 @@ func New(cfg Config) (*Server, error) {
 }
 
 // Close closes the database connection
-func (s *Server) Close() error {
+func (s *Server) Close() {
 	if s.pool != nil {
 		s.pool.Close()
 	}
-	return nil
 }
 
 // setupRoutes registers all HTTP routes
