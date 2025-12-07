@@ -4,7 +4,6 @@
 package user
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -84,87 +83,12 @@ func cleanupUsers(t *testing.T) {
 	}
 }
 
-func TestUserHandler_Create_Integration(t *testing.T) {
-	// Setup
-	cleanupUsers(t)
-	repo := NewRepository(testQueries)
-	handler := NewHandler(validator.New(), repo)
-
-	tests := []struct {
-		name           string
-		body           string
-		expectedStatus int
-		checkFunc      func(t *testing.T, body []byte)
-	}{
-		{
-			name:           "create new user",
-			body:           `{"name":"John Doe","email":"john@example.com"}`,
-			expectedStatus: http.StatusOK,
-			checkFunc: func(t *testing.T, body []byte) {
-				var response map[string]interface{}
-				if err := json.Unmarshal(body, &response); err != nil {
-					t.Fatalf("Failed to unmarshal response: %v", err)
-				}
-				if response["name"] != "John Doe" {
-					t.Errorf("Expected name 'John Doe', got '%v'", response["name"])
-				}
-				if response["email"] != "john@example.com" {
-					t.Errorf("Expected email 'john@example.com', got '%v'", response["email"])
-				}
-				if response["id"] == nil || response["id"] == "" {
-					t.Error("Expected ID to be set")
-				}
-			},
-		},
-		{
-			name:           "upsert existing user by email",
-			body:           `{"name":"John Updated","email":"john@example.com"}`,
-			expectedStatus: http.StatusOK,
-			checkFunc: func(t *testing.T, body []byte) {
-				var response map[string]interface{}
-				if err := json.Unmarshal(body, &response); err != nil {
-					t.Fatalf("Failed to unmarshal response: %v", err)
-				}
-				if response["name"] != "John Updated" {
-					t.Errorf("Expected name 'John Updated', got '%v'", response["name"])
-				}
-				if response["email"] != "john@example.com" {
-					t.Errorf("Expected email 'john@example.com', got '%v'", response["email"])
-				}
-				// ID should be "1" since it's an update of the first user
-				if response["id"] != "1" {
-					t.Errorf("Expected ID '1', got '%v'", response["id"])
-				}
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodPost, "/users", bytes.NewBufferString(tt.body))
-			req.Header.Set("Content-Type", "application/json")
-			w := httptest.NewRecorder()
-
-			handler.Create(w, req)
-
-			if w.Code != tt.expectedStatus {
-				t.Errorf("Expected status %d, got %d", tt.expectedStatus, w.Code)
-			}
-
-			if tt.checkFunc != nil {
-				tt.checkFunc(t, w.Body.Bytes())
-			}
-		})
-	}
-}
-
 func TestUserHandler_List_Integration(t *testing.T) {
 	// Setup
 	cleanupUsers(t)
 	repo := NewRepository(testQueries)
-	handler := NewHandler(validator.New(), repo)
 
-	// Create some test users
+	// Create some test users directly via repository (simulating auth/register)
 	users := []struct {
 		name  string
 		email string
@@ -175,14 +99,18 @@ func TestUserHandler_List_Integration(t *testing.T) {
 	}
 
 	for _, u := range users {
-		body := fmt.Sprintf(`{"name":"%s","email":"%s"}`, u.name, u.email)
-		req := httptest.NewRequest(http.MethodPost, "/users", bytes.NewBufferString(body))
-		req.Header.Set("Content-Type", "application/json")
-		w := httptest.NewRecorder()
-		handler.Create(w, req)
+		userReq := &CreateUserRequest{
+			Name:  u.name,
+			Email: u.email,
+		}
+		_, err := repo.Upsert(context.Background(), userReq, "hashedpassword")
+		if err != nil {
+			t.Fatalf("Failed to create user %s: %v", u.email, err)
+		}
 	}
 
-	// Test list
+	// Test list via handler
+	handler := NewHandler(validator.New(), repo)
 	req := httptest.NewRequest(http.MethodGet, "/users", nil)
 	w := httptest.NewRecorder()
 
@@ -214,9 +142,8 @@ func TestUserHandler_ListByEmail_Integration(t *testing.T) {
 	// Setup
 	cleanupUsers(t)
 	repo := NewRepository(testQueries)
-	handler := NewHandler(validator.New(), repo)
 
-	// Create some test users (mixed-case emails to verify case-insensitivity)
+	// Create some test users directly via repository (simulating auth/register)
 	users := []struct {
 		name  string
 		email string
@@ -228,17 +155,18 @@ func TestUserHandler_ListByEmail_Integration(t *testing.T) {
 	}
 
 	for _, u := range users {
-		body := fmt.Sprintf(`{"name":"%s","email":"%s"}`, u.name, u.email)
-		req := httptest.NewRequest(http.MethodPost, "/users", bytes.NewBufferString(body))
-		req.Header.Set("Content-Type", "application/json")
-		w := httptest.NewRecorder()
-		handler.Create(w, req)
-		if w.Code != http.StatusOK {
-			t.Fatalf("failed to create user %s: status %d body=%s", u.email, w.Code, w.Body.String())
+		userReq := &CreateUserRequest{
+			Name:  u.name,
+			Email: u.email,
+		}
+		_, err := repo.Upsert(context.Background(), userReq, "hashedpassword")
+		if err != nil {
+			t.Fatalf("Failed to create user %s: %v", u.email, err)
 		}
 	}
 
-	// Filter by 'JoHn' with mixed case should still match john.doe and johnny
+	// Test filter via handler
+	handler := NewHandler(validator.New(), repo)
 	req := httptest.NewRequest(http.MethodGet, "/users?email=JoHn", nil)
 	w := httptest.NewRecorder()
 

@@ -12,7 +12,7 @@ import (
 
 // Repo defines the interface for user data access
 type Repo interface {
-	Upsert(ctx context.Context, req *CreateUserRequest) (*UserResponse, error)
+	Upsert(ctx context.Context, req *CreateUserRequest, passwordHash string) (*UserResponse, error)
 	List(ctx context.Context) ([]*UserResponse, error)
 	ListByEmail(ctx context.Context, email string) ([]*UserResponse, error)
 }
@@ -28,13 +28,14 @@ func NewRepository(queries *db.Queries) *Repository {
 }
 
 // Upsert creates or updates a user by email
-func (r *Repository) Upsert(ctx context.Context, req *CreateUserRequest) (*UserResponse, error) {
+func (r *Repository) Upsert(ctx context.Context, req *CreateUserRequest, passwordHash string) (*UserResponse, error) {
 	now := pgtype.Timestamptz{Time: time.Now(), Valid: true}
 	user, err := r.queries.UpsertUser(ctx, db.UpsertUserParams{
-		Name:      req.Name,
-		Email:     req.Email,
-		CreatedAt: now,
-		UpdatedAt: now,
+		Name:         req.Name,
+		Email:        req.Email,
+		PasswordHash: passwordHash,
+		CreatedAt:    now,
+		UpdatedAt:    now,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to upsert user: %w", err)

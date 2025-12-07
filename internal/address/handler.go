@@ -30,7 +30,9 @@ func NewHandler(v *validator.Validator, repo Repo) *Handler {
 // @Param address body CreateAddressRequest true "Address to create"
 // @Success 201 {object} AddressResponse
 // @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string
 // @Failure 500 {object} map[string]string
+// @Security BearerAuth
 // @Router /addresses [post]
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var req CreateAddressRequest
@@ -61,7 +63,9 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 // @Param id path int true "Address ID"
 // @Success 200 {object} AddressResponse
 // @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string
 // @Failure 404 {object} map[string]string
+// @Security BearerAuth
 // @Router /addresses/{id} [get]
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
@@ -90,7 +94,9 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 // @Param address_type query string false "Address type (shipping, billing)"
 // @Success 200 {array} AddressResponse
 // @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string
 // @Failure 500 {object} map[string]string
+// @Security BearerAuth
 // @Router /addresses [get]
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	entityType := r.URL.Query().Get("entity_type")
@@ -129,7 +135,9 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 // @Param address body UpdateAddressRequest true "Updated address data"
 // @Success 200 {object} AddressResponse
 // @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string
 // @Failure 500 {object} map[string]string
+// @Security BearerAuth
 // @Router /addresses/{id} [put]
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
@@ -166,7 +174,9 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 // @Param id path int true "Address ID"
 // @Success 204 "No Content"
 // @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string
 // @Failure 500 {object} map[string]string
+// @Security BearerAuth
 // @Router /addresses/{id} [delete]
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")

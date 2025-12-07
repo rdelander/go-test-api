@@ -3,7 +3,6 @@
 package user
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -16,14 +15,14 @@ import (
 
 // mockUserRepository is a mock implementation of UserRepository for testing
 type mockUserRepository struct {
-	upsertFunc      func(ctx context.Context, req *CreateUserRequest) (*UserResponse, error)
+	upsertFunc      func(ctx context.Context, req *CreateUserRequest, passwordHash string) (*UserResponse, error)
 	listFunc        func(ctx context.Context) ([]*UserResponse, error)
 	listByEmailFunc func(ctx context.Context, email string) ([]*UserResponse, error)
 }
 
-func (m *mockUserRepository) Upsert(ctx context.Context, req *CreateUserRequest) (*UserResponse, error) {
+func (m *mockUserRepository) Upsert(ctx context.Context, req *CreateUserRequest, passwordHash string) (*UserResponse, error) {
 	if m.upsertFunc != nil {
-		return m.upsertFunc(ctx, req)
+		return m.upsertFunc(ctx, req, passwordHash)
 	}
 	return nil, errors.New("not implemented")
 }
@@ -40,109 +39,6 @@ func (m *mockUserRepository) ListByEmail(ctx context.Context, email string) ([]*
 		return m.listByEmailFunc(ctx, email)
 	}
 	return nil, errors.New("not implemented")
-}
-
-func TestUserHandler_Create(t *testing.T) {
-	tests := []struct {
-		name           string
-		body           string
-		mockUpsert     func(ctx context.Context, req *CreateUserRequest) (*UserResponse, error)
-		expectedStatus int
-		expectedBody   map[string]interface{}
-	}{
-		{
-			name: "valid user creation",
-			body: `{"name":"John Doe","email":"john@example.com"}`,
-			mockUpsert: func(ctx context.Context, req *CreateUserRequest) (*UserResponse, error) {
-				return &UserResponse{
-					ID:    "1",
-					Name:  req.Name,
-					Email: req.Email,
-				}, nil
-			},
-			expectedStatus: http.StatusOK,
-			expectedBody: map[string]interface{}{
-				"id":    "1",
-				"name":  "John Doe",
-				"email": "john@example.com",
-			},
-		},
-		{
-			name:           "invalid JSON",
-			body:           `{invalid json}`,
-			mockUpsert:     nil,
-			expectedStatus: http.StatusBadRequest,
-			expectedBody: map[string]interface{}{
-				"error": "invalid JSON",
-			},
-		},
-		{
-			name:           "missing required name",
-			body:           `{"email":"john@example.com"}`,
-			mockUpsert:     nil,
-			expectedStatus: http.StatusBadRequest,
-			expectedBody: map[string]interface{}{
-				"error": "Field 'Name' failed validation 'required'",
-			},
-		},
-		{
-			name:           "invalid email format",
-			body:           `{"name":"John Doe","email":"invalid-email"}`,
-			mockUpsert:     nil,
-			expectedStatus: http.StatusBadRequest,
-			expectedBody: map[string]interface{}{
-				"error": "Field 'Email' failed validation 'email'",
-			},
-		},
-		{
-			name: "database error",
-			body: `{"name":"John Doe","email":"john@example.com"}`,
-			mockUpsert: func(ctx context.Context, req *CreateUserRequest) (*UserResponse, error) {
-				return nil, errors.New("database connection failed")
-			},
-			expectedStatus: http.StatusInternalServerError,
-			expectedBody: map[string]interface{}{
-				"error": "failed to create user: database connection failed",
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			// Setup
-			mockRepo := &mockUserRepository{
-				upsertFunc: tt.mockUpsert,
-			}
-			handler := NewHandler(validator.New(), mockRepo)
-
-			// Create request
-			req := httptest.NewRequest(http.MethodPost, "/users", bytes.NewBufferString(tt.body))
-			req.Header.Set("Content-Type", "application/json")
-			w := httptest.NewRecorder()
-
-			// Execute
-			handler.Create(w, req)
-
-			// Assert status code
-			if w.Code != tt.expectedStatus {
-				t.Errorf("expected status %d, got %d", tt.expectedStatus, w.Code)
-			}
-
-			// Assert response body
-			var response map[string]interface{}
-			if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
-				t.Fatalf("failed to decode response: %v", err)
-			}
-
-			for key, expectedValue := range tt.expectedBody {
-				if response[key] != expectedValue {
-					t.Errorf("expected %s to be %v, got %v", key, expectedValue, response[key])
-				}
-			}
-		})
-	}
 }
 
 func TestUserHandler_List(t *testing.T) {

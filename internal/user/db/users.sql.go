@@ -17,13 +17,50 @@ FROM users
 WHERE id = $1
 `
 
-func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
+type GetUserRow struct {
+	ID        int32              `json:"id"`
+	Name      string             `json:"name"`
+	Email     string             `json:"email"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) GetUser(ctx context.Context, id int32) (GetUserRow, error) {
 	row := q.db.QueryRow(ctx, getUser, id)
-	var i User
+	var i GetUserRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.Email,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT id, name, email, password_hash, created_at, updated_at 
+FROM users
+WHERE email = $1
+`
+
+type GetUserByEmailRow struct {
+	ID           int32              `json:"id"`
+	Name         string             `json:"name"`
+	Email        string             `json:"email"`
+	PasswordHash string             `json:"password_hash"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
+	row := q.db.QueryRow(ctx, getUserByEmail, email)
+	var i GetUserByEmailRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.PasswordHash,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -36,15 +73,23 @@ FROM users
 ORDER BY id
 `
 
-func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
+type ListUsersRow struct {
+	ID        int32              `json:"id"`
+	Name      string             `json:"name"`
+	Email     string             `json:"email"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
 	rows, err := q.db.Query(ctx, listUsers)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []User{}
+	items := []ListUsersRow{}
 	for rows.Next() {
-		var i User
+		var i ListUsersRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -69,15 +114,23 @@ WHERE email ILIKE $1
 ORDER BY id
 `
 
-func (q *Queries) ListUsersByEmail(ctx context.Context, email string) ([]User, error) {
+type ListUsersByEmailRow struct {
+	ID        int32              `json:"id"`
+	Name      string             `json:"name"`
+	Email     string             `json:"email"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) ListUsersByEmail(ctx context.Context, email string) ([]ListUsersByEmailRow, error) {
 	rows, err := q.db.Query(ctx, listUsersByEmail, email)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []User{}
+	items := []ListUsersByEmailRow{}
 	for rows.Next() {
-		var i User
+		var i ListUsersByEmailRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -96,30 +149,41 @@ func (q *Queries) ListUsersByEmail(ctx context.Context, email string) ([]User, e
 }
 
 const upsertUser = `-- name: UpsertUser :one
-INSERT INTO users (name, email, created_at, updated_at)
-VALUES ($1, $2, $3, $4)
+INSERT INTO users (name, email, password_hash, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5)
 ON CONFLICT (email) 
 DO UPDATE SET 
     name = EXCLUDED.name,
+    password_hash = EXCLUDED.password_hash,
     updated_at = EXCLUDED.updated_at
 RETURNING id, name, email, created_at, updated_at
 `
 
 type UpsertUserParams struct {
+	Name         string             `json:"name"`
+	Email        string             `json:"email"`
+	PasswordHash string             `json:"password_hash"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+}
+
+type UpsertUserRow struct {
+	ID        int32              `json:"id"`
 	Name      string             `json:"name"`
 	Email     string             `json:"email"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
-func (q *Queries) UpsertUser(ctx context.Context, arg UpsertUserParams) (User, error) {
+func (q *Queries) UpsertUser(ctx context.Context, arg UpsertUserParams) (UpsertUserRow, error) {
 	row := q.db.QueryRow(ctx, upsertUser,
 		arg.Name,
 		arg.Email,
+		arg.PasswordHash,
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)
-	var i User
+	var i UpsertUserRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,

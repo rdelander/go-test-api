@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"os"
 	"strconv"
+	"time"
 
 	"go-test-api/internal/database"
 	"go-test-api/internal/logging"
@@ -23,6 +24,11 @@ import (
 
 // @host localhost:8080
 // @BasePath /
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
 
 func getEnv(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
@@ -76,6 +82,8 @@ func main() {
 			DBName:   getEnv("DB_NAME", "gotestdb"),
 			SSLMode:  getEnv("DB_SSLMODE", "disable"),
 		},
+		JWTSecret: getEnv("JWT_SECRET", "your-secret-key-change-in-production"),
+		JWTExpiry: 24 * time.Hour,
 	}
 
 	// Create server

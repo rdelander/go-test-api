@@ -110,9 +110,10 @@ type Address struct {
 }
 
 type User struct {
-	ID        int32              `json:"id"`
-	Name      string             `json:"name"`
-	Email     string             `json:"email"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	ID           int32              `json:"id"`
+	Name         string             `json:"name"`
+	Email        string             `json:"email"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	PasswordHash string             `json:"password_hash"`
 }

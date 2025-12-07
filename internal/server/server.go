@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	_ "go-test-api/docs"
 	"go-test-api/internal/address"
 	addressdb "go-test-api/internal/address/db"
+	"go-test-api/internal/auth"
 	"go-test-api/internal/database"
 	"go-test-api/internal/middleware"
 	"go-test-api/internal/user"
@@ -25,12 +27,16 @@ type Server struct {
 	pool           *pgxpool.Pool
 	userHandler    *user.Handler
 	addressHandler *address.Handler
+	authHandler    *auth.Handler
+	authService    *auth.Service
 }
 
 // Config holds server configuration
 type Config struct {
-	Port     string
-	Database database.Config
+	Port      string
+	Database  database.Config
+	JWTSecret string
+	JWTExpiry time.Duration
 }
 
 // New creates a new Server instance with all dependencies injected
@@ -42,21 +48,31 @@ func New(cfg Config) (*Server, error) {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
+	// Initialize auth service
+	authService := auth.NewService(cfg.JWTSecret, cfg.JWTExpiry)
+	userQueries := userdb.New(pool)
+	userRepo := user.NewRepository(userQueries)
+
 	return &Server{
-		port: cfg.Port,
-		pool: pool,
+		port:        cfg.Port,
+		pool:        pool,
+		authService: authService,
 		userHandler: user.NewHandler(
 			validator.New(),
-			user.NewRepository(
-				userdb.New(pool),
-			),
+			userRepo,
 		),
 		addressHandler: address.NewHandler(
 			validator.New(),
 			address.NewRepository(
 				addressdb.New(pool),
-				userdb.New(pool),
+				userQueries,
 			),
+		),
+		authHandler: auth.NewHandler(
+			validator.New(),
+			authService,
+			userRepo,
+			userQueries,
 		),
 	}, nil
 }
@@ -71,16 +87,21 @@ func (s *Server) Close() error {
 
 // setupRoutes registers all HTTP routes
 func (s *Server) setupRoutes() {
-	// Swagger UI
+	// Swagger UI (public)
 	http.HandleFunc("GET /swagger/", httpSwagger.WrapHandler)
 
-	routes := []struct {
+	// Auth routes (public)
+	http.HandleFunc("POST /auth/register", s.authHandler.Register)
+	http.HandleFunc("POST /auth/login", s.authHandler.Login)
+
+	// Protected routes
+	authMiddleware := auth.Middleware(s.authService)
+	protectedRoutes := []struct {
 		method  string
 		path    string
 		handler http.HandlerFunc
 	}{
 		{"GET", "/users", s.userHandler.List},
-		{"POST", "/users", s.userHandler.Create},
 		{"GET", "/addresses", s.addressHandler.List},
 		{"POST", "/addresses", s.addressHandler.Create},
 		{"GET", "/addresses/{id}", s.addressHandler.Get},
@@ -88,10 +109,10 @@ func (s *Server) setupRoutes() {
 		{"DELETE", "/addresses/{id}", s.addressHandler.Delete},
 	}
 
-	routeList := []string{"GET /swagger/"}
-	for _, route := range routes {
-		http.HandleFunc(route.method+" "+route.path, route.handler)
-		routeList = append(routeList, route.method+" "+route.path)
+	routeList := []string{"GET /swagger/", "POST /auth/register", "POST /auth/login"}
+	for _, route := range protectedRoutes {
+		http.Handle(route.method+" "+route.path, authMiddleware(http.HandlerFunc(route.handler)))
+		routeList = append(routeList, route.method+" "+route.path+" (protected)")
 	}
 
 	log.Printf("Registered routes: %v", routeList)
