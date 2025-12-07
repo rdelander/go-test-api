@@ -83,21 +83,12 @@ func cleanupUsers(t *testing.T) {
 	}
 }
 
-func TestUserHandler_List_Integration(t *testing.T) {
-	// Setup
-	cleanupUsers(t)
-	repo := NewRepository(testQueries)
-
-	// Create some test users directly via repository (simulating auth/register)
-	users := []struct {
-		name  string
-		email string
-	}{
-		{"Alice", "alice@example.com"},
-		{"Bob", "bob@example.com"},
-		{"Charlie", "charlie@example.com"},
-	}
-
+// setupTestUsers creates users via the repository (simulating auth/register)
+func setupTestUsers(t *testing.T, repo *Repository, users []struct {
+	name  string
+	email string
+}) {
+	t.Helper()
 	for _, u := range users {
 		userReq := &CreateUserRequest{
 			Name:  u.name,
@@ -108,22 +99,55 @@ func TestUserHandler_List_Integration(t *testing.T) {
 			t.Fatalf("Failed to create user %s: %v", u.email, err)
 		}
 	}
+}
 
-	// Test list via handler
+// setupHandler creates a clean repository and handler for testing
+func setupHandler(t *testing.T) (*Repository, *Handler) {
+	t.Helper()
+	cleanupUsers(t)
+	repo := NewRepository(testQueries)
 	handler := NewHandler(validator.New(), repo)
-	req := httptest.NewRequest(http.MethodGet, "/users", nil)
+	return repo, handler
+}
+
+// executeListRequest makes a GET request to /users and returns the parsed response
+func executeListRequest(t *testing.T, handler *Handler, queryParams string) []map[string]interface{} {
+	t.Helper()
+	url := "/users"
+	if queryParams != "" {
+		url += "?" + queryParams
+	}
+	req := httptest.NewRequest(http.MethodGet, url, nil)
 	w := httptest.NewRecorder()
 
 	handler.List(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
+		t.Fatalf("Expected status %d, got %d", http.StatusOK, w.Code)
 	}
 
 	var response []map[string]interface{}
 	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
 		t.Fatalf("Failed to unmarshal response: %v", err)
 	}
+
+	return response
+}
+
+func TestUserHandler_List_Integration(t *testing.T) {
+	repo, handler := setupHandler(t)
+
+	users := []struct {
+		name  string
+		email string
+	}{
+		{"Alice", "alice@example.com"},
+		{"Bob", "bob@example.com"},
+		{"Charlie", "charlie@example.com"},
+	}
+	setupTestUsers(t, repo, users)
+
+	response := executeListRequest(t, handler, "")
 
 	if len(response) != 3 {
 		t.Errorf("Expected 3 users, got %d", len(response))
@@ -139,11 +163,8 @@ func TestUserHandler_List_Integration(t *testing.T) {
 }
 
 func TestUserHandler_ListByEmail_Integration(t *testing.T) {
-	// Setup
-	cleanupUsers(t)
-	repo := NewRepository(testQueries)
+	repo, handler := setupHandler(t)
 
-	// Create some test users directly via repository (simulating auth/register)
 	users := []struct {
 		name  string
 		email string
@@ -153,33 +174,9 @@ func TestUserHandler_ListByEmail_Integration(t *testing.T) {
 		{"John", "John.Doe@Example.com"},
 		{"Johnny", "johnny@EXAMPLE.com"},
 	}
+	setupTestUsers(t, repo, users)
 
-	for _, u := range users {
-		userReq := &CreateUserRequest{
-			Name:  u.name,
-			Email: u.email,
-		}
-		_, err := repo.Upsert(context.Background(), userReq, "hashedpassword")
-		if err != nil {
-			t.Fatalf("Failed to create user %s: %v", u.email, err)
-		}
-	}
-
-	// Test filter via handler
-	handler := NewHandler(validator.New(), repo)
-	req := httptest.NewRequest(http.MethodGet, "/users?email=JoHn", nil)
-	w := httptest.NewRecorder()
-
-	handler.List(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("Expected status %d, got %d", http.StatusOK, w.Code)
-	}
-
-	var response []map[string]interface{}
-	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
-		t.Fatalf("Failed to unmarshal response: %v", err)
-	}
+	response := executeListRequest(t, handler, "email=JoHn")
 
 	if len(response) != 2 {
 		t.Fatalf("Expected 2 users matching 'john', got %d", len(response))
