@@ -3,6 +3,7 @@ package address
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"go-test-api/internal/address/db"
@@ -76,12 +77,14 @@ func (r *Repository) Get(ctx context.Context, id int32) (*AddressResponse, error
 
 // ListByEntity retrieves all addresses for an entity
 func (r *Repository) ListByEntity(ctx context.Context, entityType, entityID string) ([]*AddressResponse, error) {
-	entityIDInt := int32(0)
-	fmt.Sscanf(entityID, "%d", &entityIDInt)
+	entityIdInt, err := stringToInt32(entityID)
+	if err != nil {
+		return nil, err
+	}
 
 	addrs, err := r.queries.ListAddressesByEntity(ctx, db.ListAddressesByEntityParams{
 		EntityType: db.EntityType(entityType),
-		EntityID:   entityIDInt,
+		EntityID:   int32(entityIdInt),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list addresses: %w", err)
@@ -96,12 +99,13 @@ func (r *Repository) ListByEntity(ctx context.Context, entityType, entityID stri
 
 // ListByEntityAndType retrieves addresses for an entity filtered by type
 func (r *Repository) ListByEntityAndType(ctx context.Context, entityType, entityID, addressType string) ([]*AddressResponse, error) {
-	entityIDInt := int32(0)
-	fmt.Sscanf(entityID, "%d", &entityIDInt)
-
+	entityIdInt, err := stringToInt32(entityID)
+	if err != nil {
+		return nil, err
+	}
 	addrs, err := r.queries.ListAddressesByEntityAndType(ctx, db.ListAddressesByEntityAndTypeParams{
 		EntityType:  db.EntityType(entityType),
-		EntityID:    entityIDInt,
+		EntityID:    int32(entityIdInt),
 		AddressType: db.AddressType(addressType),
 	})
 	if err != nil {
@@ -155,4 +159,12 @@ func toAddressResponse(addr db.Address) *AddressResponse {
 		PostalCode:  addr.PostalCode,
 		Country:     addr.Country,
 	}
+}
+
+func stringToInt32(s string) (int32, error) {
+	i, err := strconv.ParseInt(s, 10, 32)
+	if err != nil {
+		return 0, fmt.Errorf("invalid integer string %q: %w", s, err)
+	}
+	return int32(i), nil
 }
