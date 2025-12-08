@@ -14,7 +14,7 @@ test-unit: ## Run unit tests only
 
 test-unit-ci: ## Run unit tests with race detection and coverage for CI
 	@echo "Running unit tests with race detection and coverage..."
-	@go test -tags=unit -v -race -coverprofile=coverage.out ./...
+	@go test -tags=unit -v -race -coverprofile=coverage.out -covermode=atomic ./...
 
 test-integration: ## Run integration tests only
 	@echo "Running integration tests..."
@@ -22,7 +22,7 @@ test-integration: ## Run integration tests only
 
 test-integration-ci: ## Run integration tests for CI (no docker setup)
 	@echo "Running integration tests..."
-	@go test -tags=integration -v -coverprofile=coverage-integration.out ./...
+	@go test -tags=integration -v -coverprofile=coverage-integration.out -covermode=atomic ./...
 
 test-all: test-unit test-integration ## Run all tests (unit + integration)
 
