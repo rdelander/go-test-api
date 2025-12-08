@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"go-test-api/internal/config"
 	"go-test-api/internal/database"
 	"go-test-api/internal/user/db"
 	"go-test-api/internal/validator"
@@ -28,17 +29,10 @@ func TestMain(m *testing.M) {
 	var err error
 	ctx := context.Background()
 
-	// Connect to test database
-	cfg := database.Config{
-		Host:     getEnv("DB_HOST", "localhost"),
-		Port:     getEnvAsInt("DB_PORT", 5432),
-		User:     getEnv("DB_USER", "gouser"),
-		Password: getEnv("DB_PASSWORD", "gopassword"),
-		DBName:   getEnv("DB_NAME", "gotestdb"),
-		SSLMode:  getEnv("DB_SSLMODE", "disable"),
-	}
+	// Load config (will use development defaults)
+	cfg := config.Load()
 
-	testDB, err = database.New(ctx, cfg)
+	testDB, err = database.New(ctx, cfg.Database)
 	if err != nil {
 		fmt.Printf("Failed to connect to database: %v\n", err)
 		os.Exit(1)
@@ -53,25 +47,6 @@ func TestMain(m *testing.M) {
 	testDB.Close()
 
 	os.Exit(code)
-}
-
-func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
-}
-
-func getEnvAsInt(key string, defaultValue int) int {
-	valueStr := getEnv(key, "")
-	if valueStr == "" {
-		return defaultValue
-	}
-	var intValue int
-	if _, err := fmt.Sscanf(valueStr, "%d", &intValue); err == nil {
-		return intValue
-	}
-	return defaultValue
 }
 
 // cleanupUsers removes all users from the database
