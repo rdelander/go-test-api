@@ -64,7 +64,7 @@ jobs:
         with:
           files: ./coverage.out
           flags: unit
-          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   test-integration:
     name: Integration Tests
