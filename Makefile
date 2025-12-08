@@ -22,7 +22,7 @@ test-integration: ## Run integration tests only
 
 test-integration-ci: ## Run integration tests for CI (no docker setup)
 	@echo "Running integration tests..."
-	@go test -tags=integration -v ./...
+	@go test -tags=integration -v -coverprofile=coverage-integration.out ./...
 
 test-all: test-unit test-integration ## Run all tests (unit + integration)
 
