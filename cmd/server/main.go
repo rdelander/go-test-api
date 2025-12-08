@@ -3,10 +3,8 @@ package main
 import (
 	"log/slog"
 	"os"
-	"strconv"
-	"time"
 
-	"go-test-api/internal/database"
+	"go-test-api/internal/config"
 	"go-test-api/internal/logging"
 	"go-test-api/internal/server"
 )
@@ -30,29 +28,10 @@ import (
 // @name Authorization
 // @description Type "Bearer" followed by a space and JWT token.
 
-func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
-}
-
-func getEnvAsInt(key string, defaultValue int) int {
-	valueStr := getEnv(key, "")
-	if valueStr == "" {
-		return defaultValue
-	}
-	if intValue, err := strconv.Atoi(valueStr); err == nil {
-		return intValue
-	}
-	return defaultValue
-}
-
-func setupLogger() {
+func setupLogger(cfg config.Config) {
 	var handler slog.Handler
-	env := getEnv("ENV", "development")
 
-	if env == "production" {
+	if cfg.IsProduction() {
 		// Compact JSON logging for production
 		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 			Level: slog.LevelInfo,
@@ -69,25 +48,17 @@ func setupLogger() {
 }
 
 func main() {
-	setupLogger()
+	cfg := config.Load()
 
-	// Load configuration from environment variables with defaults
-	cfg := server.Config{
-		Port: getEnv("PORT", "8080"),
-		Database: database.Config{
-			Host:     getEnv("DB_HOST", "localhost"),
-			Port:     getEnvAsInt("DB_PORT", 5432),
-			User:     getEnv("DB_USER", "gouser"),
-			Password: getEnv("DB_PASSWORD", "gopassword"),
-			DBName:   getEnv("DB_NAME", "gotestdb"),
-			SSLMode:  getEnv("DB_SSLMODE", "disable"),
-		},
-		JWTSecret: getEnv("JWT_SECRET", "your-secret-key-change-in-production"),
-		JWTExpiry: 24 * time.Hour,
-	}
+	setupLogger(cfg)
 
 	// Create server
-	srv, err := server.New(cfg)
+	srv, err := server.New(server.Config{
+		Port:      cfg.Port,
+		Database:  cfg.Database,
+		JWTSecret: cfg.JWTSecret,
+		JWTExpiry: cfg.JWTExpiry,
+	})
 	if err != nil {
 		slog.Error("Failed to create server", "error", err)
 		os.Exit(1)
