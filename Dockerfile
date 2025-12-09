@@ -30,6 +30,9 @@ WORKDIR /root/
 # Copy the binary from builder
 COPY --from=builder /app/server .
 
+# Copy migrations directory
+COPY --from=builder /app/migrations ./migrations
+
 # Expose port
 EXPOSE 8080
 

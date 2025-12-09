@@ -12,6 +12,7 @@ import (
 	addressdb "go-test-api/internal/address/db"
 	"go-test-api/internal/auth"
 	"go-test-api/internal/database"
+	"go-test-api/internal/health"
 	"go-test-api/internal/middleware"
 	"go-test-api/internal/user"
 	userdb "go-test-api/internal/user/db"
@@ -29,6 +30,7 @@ type Server struct {
 	addressHandler *address.Handler
 	authHandler    *auth.Handler
 	authService    *auth.Service
+	healthHandler  *health.Handler
 }
 
 // Config holds server configuration
@@ -54,9 +56,10 @@ func New(cfg Config) (*Server, error) {
 	userRepo := user.NewRepository(userQueries)
 
 	return &Server{
-		port:        cfg.Port,
-		pool:        pool,
-		authService: authService,
+		port:          cfg.Port,
+		pool:          pool,
+		authService:   authService,
+		healthHandler: health.NewHandler(),
 		userHandler: user.NewHandler(
 			validator.New(),
 			userRepo,
@@ -86,6 +89,9 @@ func (s *Server) Close() {
 
 // setupRoutes registers all HTTP routes
 func (s *Server) setupRoutes() {
+	// Health check (public)
+	http.HandleFunc("GET /health", s.healthHandler.Check)
+
 	// Swagger UI (public)
 	http.HandleFunc("GET /swagger/", httpSwagger.WrapHandler)
 
@@ -108,7 +114,7 @@ func (s *Server) setupRoutes() {
 		{"DELETE", "/addresses/{id}", s.addressHandler.Delete},
 	}
 
-	routeList := []string{"GET /swagger/", "POST /auth/register", "POST /auth/login"}
+	routeList := []string{"GET /health", "GET /swagger/", "POST /auth/register", "POST /auth/login"}
 	for _, route := range protectedRoutes {
 		http.Handle(route.method+" "+route.path, authMiddleware(http.HandlerFunc(route.handler)))
 		routeList = append(routeList, route.method+" "+route.path+" (protected)")
