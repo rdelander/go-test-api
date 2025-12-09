@@ -25,7 +25,9 @@ func RunMigrations(cfg Config) error {
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
-	defer db.Close()
+	defer func() {
+		_ = db.Close()
+	}()
 
 	// Create postgres driver instance
 	driver, err := postgres.WithInstance(db, &postgres.Config{})
