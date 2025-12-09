@@ -1,4 +1,4 @@
-.PHONY: help test test-unit test-integration test-all test-coverage build run watch clean docker-build docker-up docker-up-db docker-down migrate-up migrate-down sqlc-generate fmt lint dev
+.PHONY: help test test-unit test-integration test-e2e test-all test-coverage build run watch clean docker-build docker-up docker-up-db docker-down migrate-up migrate-down sqlc-generate fmt lint dev
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -23,6 +23,14 @@ test-integration: ## Run integration tests only
 test-integration-ci: ## Run integration tests for CI (no docker setup)
 	@echo "Running integration tests..."
 	@go test -tags=integration -v -coverprofile=coverage-integration.out -covermode=atomic ./...
+
+test-e2e: ## Run E2E tests (requires Docker)
+	@echo "Running E2E tests..."
+	@./scripts/test-e2e.sh
+
+test-e2e-ci: ## Run E2E tests for CI (assumes services already running)
+	@echo "Running E2E tests..."
+	@go test -tags=e2e -v ./test/e2e/...
 
 test-all: test-unit test-integration ## Run all tests (unit + integration)
 

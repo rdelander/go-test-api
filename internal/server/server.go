@@ -86,6 +86,13 @@ func (s *Server) Close() {
 
 // setupRoutes registers all HTTP routes
 func (s *Server) setupRoutes() {
+	// Health check (public)
+	http.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"ok"}`))
+	})
+
 	// Swagger UI (public)
 	http.HandleFunc("GET /swagger/", httpSwagger.WrapHandler)
 
@@ -108,7 +115,7 @@ func (s *Server) setupRoutes() {
 		{"DELETE", "/addresses/{id}", s.addressHandler.Delete},
 	}
 
-	routeList := []string{"GET /swagger/", "POST /auth/register", "POST /auth/login"}
+	routeList := []string{"GET /health", "GET /swagger/", "POST /auth/register", "POST /auth/login"}
 	for _, route := range protectedRoutes {
 		http.Handle(route.method+" "+route.path, authMiddleware(http.HandlerFunc(route.handler)))
 		routeList = append(routeList, route.method+" "+route.path+" (protected)")
