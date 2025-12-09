@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"go-test-api/internal/config"
+	"go-test-api/internal/database"
 	"go-test-api/internal/logging"
 	"go-test-api/internal/server"
 )
@@ -51,6 +52,12 @@ func main() {
 	cfg := config.Load()
 
 	setupLogger(cfg)
+
+	// Run database migrations
+	if err := database.RunMigrations(cfg.Database); err != nil {
+		slog.Error("Failed to run migrations", "error", err)
+		os.Exit(1)
+	}
 
 	// Create server
 	srv, err := server.New(server.Config{
